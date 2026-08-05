@@ -1,0 +1,34 @@
+meta {
+  name: Clarify an acceptable alternative bike
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}/clarify-alternative
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "alternativeFound": true,
+    "bikeId": "BIKE-901",
+    "bikeModel": "Gravel Explorer 901"
+  }
+}
+
+script:pre-request {
+  // sign -> order (out of stock) -> parks on the clarify-alternative user task
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  The recommended, domain-routed completion path: this endpoint persists the chosen
+  alternative on the aggregate before completing the user task, so the captured data
+  reaches the domain model.
+}

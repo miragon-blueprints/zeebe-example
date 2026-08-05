@@ -1,0 +1,20 @@
+meta {
+  name: Dealer reports the bike handover
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}/report-handover
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // re-order the alternative -> join -> handover wait state
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
+assert {
+  res.status: eq 200
+}

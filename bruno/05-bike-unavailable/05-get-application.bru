@@ -1,0 +1,19 @@
+meta {
+  name: The alternative bike has been handed over
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+}
+
+assert {
+  res.status: eq 200
+}

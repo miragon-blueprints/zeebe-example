@@ -1,0 +1,15 @@
+spring:
+  main:
+    web-application-type: none
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:bikeleasing-test;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect

@@ -1,0 +1,24 @@
+server:
+  # 8080 is taken by the Camunda 8 web apps (Operate/Tasklist) in the local stack.
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bikeleasing
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# The Zeebe connection (self-managed, gRPC 26500 / REST 8080, auth none) and the BPMN/DMN/form
+# auto-deployment are contributed by the common-zeebe module (zeebe-application.yaml +
+# EngineAutoConfiguration). Nothing engine-specific needs to live here.
+
+logging:
+  level:
+    io.camunda.zeebe.client.impl.ZeebeCallCredentials: ERROR
