@@ -1,0 +1,15 @@
+meta {
+  name: Customer signs the contract
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}/sign-contract
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

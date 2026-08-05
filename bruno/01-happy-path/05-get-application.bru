@@ -1,0 +1,26 @@
+meta {
+  name: The bike has been handed over
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  The process now waits out the 14-day withdrawal period on a timer before it
+  reaches "leasing active". Zeebe timers cannot be fast-forwarded over REST on a
+  running broker, so that final transition is covered by the process test
+  (`increaseTime`) rather than here.
+}

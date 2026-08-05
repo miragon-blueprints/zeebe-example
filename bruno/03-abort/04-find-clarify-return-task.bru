@@ -1,0 +1,34 @@
+meta {
+  name: Find the clarify-return task (in the cancelBikeOrder call activity)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{camundaRest}}/user-tasks/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "elementId": "userTask_clarifyReturn",
+      "state": "CREATED"
+    }
+  }
+}
+
+script:pre-request {
+  // withdrawal triggers compensation -> cancelBikeOrder parks on its form-only user task
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
+assert {
+  res.status: eq 200
+  res.body.items[0].userTaskKey: isDefined
+}
+
+vars:post-response {
+  userTaskKey: res.body.items[0].userTaskKey
+}

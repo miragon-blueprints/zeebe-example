@@ -1,0 +1,30 @@
+meta {
+  name: Complete the clarify-return task via the Camunda 8 REST API
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{camundaRest}}/user-tasks/{{userTaskKey}}/completion
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "variables": {
+      "returnClarified": true
+    }
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  This is the form-only counter-example: the clarify-return task carries no domain
+  REST endpoint, so it is completed straight through the Camunda 8 REST API and its
+  data never reaches the domain model. Contrast with clarify-alternative in
+  05-bike-unavailable, which is completed through a domain endpoint.
+}
