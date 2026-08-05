@@ -1,0 +1,69 @@
+[versions]
+spring_version = "4.0.6"
+spring_dependency_version = "1.1.7"
+kotlin_version = "2.3.21"
+kotlin_logging_version = "3.0.5"
+zeebe_version = "8.9.6"
+bpmn_to_code_version = "3.1.0"
+bpmn_to_code_testing_version = "5.0.0"
+archunit_version = "1.4.2"
+konsist_version = "0.17.3"
+mockk_version = "1.14.11"
+spring_mockk_version = "5.0.1"
+mockito_version = "5.2.0"
+kotlin_mockito_version = "6.3.0"
+testcontainers_version = "2.0.5"
+postgres_version = "42.7.11"
+h2_version = "2.4.240"
+
+[libraries]
+# Application
+web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "spring_version" }
+devtools = { module = "org.springframework.boot:spring-boot-devtools", version.ref = "spring_version" }
+jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa", version.ref = "spring_version" }
+postgres = { module = "org.postgresql:postgresql", version.ref = "postgres_version" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin_version" }
+kotlin_logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin_logging_version" }
+jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+
+# Camunda 8 / Zeebe
+zeebeSdk = { module = "io.camunda:camunda-spring-boot-starter", version.ref = "zeebe_version" }
+
+# BPMN-to-code (generates the typed process API from the *.bpmn models; testing = model validation)
+bpmnToCodeRuntime = { module = "io.miragon:bpmn-to-code-runtime", version.ref = "bpmn_to_code_version" }
+bpmnToCodeTesting = { module = "io.miragon:bpmn-to-code-testing", version.ref = "bpmn_to_code_testing_version" }
+
+# Architecture tests
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit_version" }
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist_version" }
+
+# Testing
+zeebeProcessTest = { module = "io.camunda:camunda-process-test-spring", version.ref = "zeebe_version" }
+spring_test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "spring_version" }
+spring_webTest = { module = "org.springframework.boot:spring-boot-webmvc-test", version.ref = "spring_version" }
+spring_dataJpaTest = { module = "org.springframework.boot:spring-boot-starter-data-jpa-test", version.ref = "spring_version" }
+mockito = { module = "org.mockito:mockito-inline", version.ref = "mockito_version" }
+kotlin_mockito = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "kotlin_mockito_version" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk_version" }
+spring_mockk = { module = "com.ninja-squad:springmockk", version.ref = "spring_mockk_version" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers_version" }
+h2 = { module = "com.h2database:h2", version.ref = "h2_version" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher", version = "6.1.0" }
+
+[bundles]
+defaultService = ["kotlin-reflect", "kotlin_logging", "jackson-kotlin", "devtools", "web", "zeebeSdk"]
+database = ["jpa", "postgres"]
+test = ["spring_test", "spring_webTest", "spring_dataJpaTest", "mockito", "mockk", "spring_mockk", "kotlin_mockito", "testcontainers"]
+archunit = ["archunit"]
+konsist = ["konsist"]
+zeebeProcessTest = ["zeebeProcessTest", "h2"]
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin_version" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin_version" }
+kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin_version" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin_version" }
+springframework = { id = "org.springframework.boot", version.ref = "spring_version" }
+spring-dependency = { id = "io.spring.dependency-management", version.ref = "spring_dependency_version" }
+bpmnToCode = { id = "io.miragon.bpmn-to-code-gradle", version.ref = "bpmn_to_code_version" }
+gradleRetryTesting = { id = "org.gradle.test-retry", version = "1.6.5" }
