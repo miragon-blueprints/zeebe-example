@@ -1,0 +1,37 @@
+{
+  "suites" : [ {
+    "id" : "io.miragon.blueprint.process.BikeLeasingProcessTest",
+    "name" : "BikeLeasingProcessTest",
+    "coverages" : [ {
+      "processDefinitionId" : "bikeLeasingProcess",
+      "completedElements" : [ "startEvent_leasingRequestReceived", "serviceTask_validateApplication", "businessRuleTask_checkCreditRating", "gateway_isSolvent", "subProcess_concludeContract", "startEvent_customerEligible", "serviceTask_sendContract", "gateway_awaitSignature", "event_contractSigned", "endEvent_contractValid", "gateway_fork", "serviceTask_issueInsurancePolicy", "gateway_bikeSourceJoin", "serviceTask_orderBike", "gateway_bikeAvailable", "gateway_join", "event_handoverReported", "subProcess_applicationWithdrawn", "startEvent_applicationWithdrawn", "event_reverseApplication", "boundary_compensateContract", "serviceTask_cancelContract", "boundary_compensateInsurance", "serviceTask_cancelPolicy", "boundary_compensateOrder", "callActivity_cancelBikeOrder", "serviceTask_sendCancellationConfirmation", "endEvent_applicationCancelled", "serviceTask_sendRejection", "endEvent_applicationRejected", "userTask_clarifyAlternative", "gateway_alternativeFound", "event_withdrawalPeriodElapsed", "endEvent_leasingActive", "boundary_signatureReminder", "serviceTask_sendReminderMail", "event_signatureDeadline", "endEvent_notSigned", "boundary_contractNotSigned", "endEvent_prospectReminded" ],
+      "takenSequenceFlows" : [ "E01", "E02", "Flow_08ad25m", "Flow_0bgyqyx", "Flow_0cq39pq", "Flow_0dj8bxx", "Flow_0ff6219", "Flow_0m29pj0", "Flow_0ncgjti", "Flow_0sm2h51", "Flow_0tjit66", "Flow_0z1vqev", "Flow_10dsfgr", "Flow_13li8f0", "Flow_17zd4n8", "Flow_1jra6g7", "Flow_1oudvdg", "Flow_1qm0pcr", "Flow_0ete2ij", "Flow_00bctyk", "Flow_054y6af", "Flow_0dbz33i", "Flow_0msl1d4", "Flow_162bkdk", "Flow_1czyhqn", "Flow_1q8awsj", "Flow_0p7ddam", "Flow_1it2fbs", "Flow_reminder1", "Flow_reminder2", "Flow_1uekrwv" ],
+      "coverage" : 0.922077922077922
+    }, {
+      "processDefinitionId" : "cancelBikeOrder",
+      "completedElements" : [ "startEvent_cancellationRequired", "serviceTask_requestCancellation", "gateway_cancellationPossible", "userTask_clarifyReturn", "serviceTask_bookCosts", "gateway_join", "endEvent_orderReversed" ],
+      "takenSequenceFlows" : [ "Flow_0510wb5", "Flow_0gkp33w", "Flow_0tc4yfk", "Flow_0w76x5f", "Flow_1a0g4v1", "Flow_1v5tej2" ],
+      "coverage" : 0.9285714285714286
+    } ]
+  } ],
+  "models" : [ {
+    "processDefinitionId" : "bikeLeasingProcess",
+    "totalElementCount" : 77,
+    "version" : "1"
+  }, {
+    "processDefinitionId" : "cancelBikeOrder",
+    "totalElementCount" : 14,
+    "version" : "1"
+  } ],
+  "coverages" : [ {
+    "processDefinitionId" : "bikeLeasingProcess",
+    "completedElements" : [ "startEvent_leasingRequestReceived", "serviceTask_validateApplication", "businessRuleTask_checkCreditRating", "gateway_isSolvent", "subProcess_concludeContract", "startEvent_customerEligible", "serviceTask_sendContract", "gateway_awaitSignature", "event_contractSigned", "endEvent_contractValid", "gateway_fork", "serviceTask_issueInsurancePolicy", "gateway_bikeSourceJoin", "serviceTask_orderBike", "gateway_bikeAvailable", "gateway_join", "event_handoverReported", "subProcess_applicationWithdrawn", "startEvent_applicationWithdrawn", "event_reverseApplication", "boundary_compensateContract", "serviceTask_cancelContract", "boundary_compensateInsurance", "serviceTask_cancelPolicy", "boundary_compensateOrder", "callActivity_cancelBikeOrder", "serviceTask_sendCancellationConfirmation", "endEvent_applicationCancelled", "serviceTask_sendRejection", "endEvent_applicationRejected", "userTask_clarifyAlternative", "gateway_alternativeFound", "event_withdrawalPeriodElapsed", "endEvent_leasingActive", "boundary_signatureReminder", "serviceTask_sendReminderMail", "event_signatureDeadline", "endEvent_notSigned", "boundary_contractNotSigned", "endEvent_prospectReminded" ],
+    "takenSequenceFlows" : [ "E01", "E02", "Flow_08ad25m", "Flow_0bgyqyx", "Flow_0cq39pq", "Flow_0dj8bxx", "Flow_0ff6219", "Flow_0m29pj0", "Flow_0ncgjti", "Flow_0sm2h51", "Flow_0tjit66", "Flow_0z1vqev", "Flow_10dsfgr", "Flow_13li8f0", "Flow_17zd4n8", "Flow_1jra6g7", "Flow_1oudvdg", "Flow_1qm0pcr", "Flow_0ete2ij", "Flow_00bctyk", "Flow_054y6af", "Flow_0dbz33i", "Flow_0msl1d4", "Flow_162bkdk", "Flow_1czyhqn", "Flow_1q8awsj", "Flow_0p7ddam", "Flow_1it2fbs", "Flow_reminder1", "Flow_reminder2", "Flow_1uekrwv" ],
+    "coverage" : 0.922077922077922
+  }, {
+    "processDefinitionId" : "cancelBikeOrder",
+    "completedElements" : [ "startEvent_cancellationRequired", "serviceTask_requestCancellation", "gateway_cancellationPossible", "userTask_clarifyReturn", "serviceTask_bookCosts", "gateway_join", "endEvent_orderReversed" ],
+    "takenSequenceFlows" : [ "Flow_0510wb5", "Flow_0gkp33w", "Flow_0tc4yfk", "Flow_0w76x5f", "Flow_1a0g4v1", "Flow_1v5tej2" ],
+    "coverage" : 0.9285714285714286
+  } ]
+}
