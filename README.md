@@ -4,10 +4,8 @@ A ready-to-fork **starting point** for automating a business process on
 [Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot and Kotlin — one complete,
 runnable, production-shaped BPMN service you can clone and make your own.
 
-It is the **Camunda 8 / Zeebe counterpart** to the embedded
-[CIB seven bike-leasing blueprint](https://github.com/miragon-blueprints/cibseven-embedded-example):
-the same MiraVelo scenario and the same hexagonal engineering scaffolding, re-modelled for an
-external Zeebe broker with job workers instead of an in-process engine.
+It targets an **external Zeebe broker**: each BPMN service task is handled by a Spring **job worker**
+rather than an in-process engine, wrapped in clean hexagonal engineering scaffolding.
 
 ## The scenario
 
