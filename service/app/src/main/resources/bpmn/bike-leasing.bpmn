@@ -35,7 +35,12 @@
     </bpmn:startEvent>
     <bpmn:serviceTask id="serviceTask_orderBike" name="Order bike from dealer">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition type="miravelo.orderBike" />
+        <!-- Incident demo: the order step is its own retryable job. retries="3" makes the
+             orderBikeWorker fail-and-retry the job (10s backoff, set in the worker) instead of letting
+             it die, so the countdown is visible in Operate and Zeebe raises an incident on this task
+             once the retries hit 0 (~20s). Reproduce it with the 06-incident-demo Bruno collection
+             (poison bike id BIKE-FAIL). -->
+        <zeebe:taskDefinition type="miravelo.orderBike" retries="3" />
         <!-- Result variables the orderBike worker writes. -->
         <zeebe:ioMapping>
           <zeebe:output source="=orderId" target="orderId" />
