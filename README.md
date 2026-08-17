@@ -140,6 +140,13 @@ user task can be resolved **two ways**, a deliberate contrast:
   completing it via the Camunda Form or the Camunda 8 REST API never touches the domain, so its data
   lands only in process variables (see the `bpmn:documentation` on each task).
 
+## Incident demo
+
+Want to teach **transaction boundaries, retries and incidents**? Submit a request for the poison bike
+`BIKE-FAIL`: the simulated dealer "outage" fails the *Order bike from dealer* job, its retries count
+down (`retries="3"`, 10s apart), and once they hit 0 Zeebe raises an **incident** you can analyze and
+retry in **Operate**. A ready-to-run Bruno collection lives in `bruno/06-incident-demo/`.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss substantial changes first, keep the

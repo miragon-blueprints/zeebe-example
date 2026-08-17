@@ -1,0 +1,32 @@
+meta {
+  name: Reset the failed order job's retries
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{camundaRest}}/jobs/{{failedJobKey}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "changeset": {
+      "retries": 3
+    }
+  }
+}
+
+docs {
+  # Manual retry, part 1 of 2
+
+  In Camunda 8 a manual retry is two operations — exactly what Operate's "Retry"
+  button does under the hood. First we re-arm the failed job with fresh retries
+  (`PATCH /v2/jobs/{jobKey}`); then `06-resolve-incident` resolves the incident so
+  the job is re-activated.
+}
+
+assert {
+  res.status: eq 204
+}
