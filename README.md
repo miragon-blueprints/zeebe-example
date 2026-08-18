@@ -1,5 +1,11 @@
 # Camunda 8 Bike-Leasing Blueprint
 
+> [!NOTE]
+> **🚧 Work in progress.** This is a **solution template** — a reference to fork and build on, for
+> our consultants and anyone else — not a product that ships. It's still being fleshed out, so parts
+> may be incomplete and it may not yet fully demonstrate what it's meant to. Treat it as a
+> living example, and expect it to keep evolving.
+
 A ready-to-fork **starting point** for automating a business process on
 [Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot and Kotlin — one complete,
 runnable, production-shaped BPMN service you can clone and make your own.
