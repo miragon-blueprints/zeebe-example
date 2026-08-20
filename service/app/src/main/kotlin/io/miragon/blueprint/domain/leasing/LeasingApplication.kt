@@ -41,7 +41,14 @@ data class LeasingApplication(
     fun selectAlternative(bikeId: BikeId): LeasingApplication =
         copy(bikeId = bikeId)
 
+    /** Records that the bike was handed to the customer, opening the withdrawal period. */
+    fun reportHandover(): LeasingApplication = copy(status = LeasingStatus.HANDED_OVER)
+
+    /** Marks the leasing as live once the withdrawal period elapsed. */
     fun activate(): LeasingApplication = copy(status = LeasingStatus.ACTIVE)
+
+    /** Marks the application as withdrawn while the asynchronous cancellation runs. */
+    fun withdraw(): LeasingApplication = copy(status = LeasingStatus.WITHDRAWN)
 
     fun reject(): LeasingApplication = copy(status = LeasingStatus.REJECTED)
 

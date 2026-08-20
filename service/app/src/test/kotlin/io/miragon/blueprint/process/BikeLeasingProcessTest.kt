@@ -10,6 +10,7 @@ import io.miragon.blueprint.adapter.outbound.zeebe.LeasingProcessAdapter
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Elements
 import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi
+import io.miragon.blueprint.application.port.inbound.ActivateLeasingUseCase
 import io.miragon.blueprint.application.port.inbound.BookCancellationCostsUseCase
 import io.miragon.blueprint.application.port.inbound.CancelContractUseCase
 import io.miragon.blueprint.application.port.inbound.CancelInsurancePolicyUseCase
@@ -99,6 +100,9 @@ class BikeLeasingProcessTest {
     @MockkBean(relaxed = true)
     private lateinit var orderBikeUseCase: OrderBikeUseCase
 
+    @MockkBean(relaxed = true)
+    private lateinit var activateLeasingUseCase: ActivateLeasingUseCase
+
     @BeforeEach
     fun setUp() {
         every { orderBikeUseCase.orderBike(any()) } returns
@@ -132,10 +136,12 @@ class BikeLeasingProcessTest {
             Elements.SERVICE_TASK_ISSUE_INSURANCE_POLICY,
             Elements.SERVICE_TASK_ORDER_BIKE,
             Elements.EVENT_HANDOVER_REPORTED,
+            Elements.SERVICE_TASK_ACTIVATE_LEASING,
             Elements.END_EVENT_LEASING_ACTIVE,
         )
         verify(exactly = 1) { sendContractUseCase.sendContract(id) }
         verify(exactly = 1) { issueInsurancePolicyUseCase.issuePolicy(id) }
+        verify(exactly = 1) { activateLeasingUseCase.activate(id) }
     }
 
     @Test
@@ -151,7 +157,7 @@ class BikeLeasingProcessTest {
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
         CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
             Elements.EVENT_SIGNATURE_DEADLINE,
-            Elements.BOUNDARY_CONTRACT_NOT_SIGNED,
+            Elements.EVENT_CONTRACT_NOT_SIGNED,
             Elements.SERVICE_TASK_SEND_REJECTION,
             Elements.END_EVENT_APPLICATION_REJECTED,
         )

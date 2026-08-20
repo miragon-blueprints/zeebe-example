@@ -3,8 +3,8 @@
 [scripts]
 run_mode = "nonconcurrent"
 
-# One-time setup per workspace: install BPMN linting tooling.
-setup = "npm --prefix tools ci"
+# One-time setup per workspace: install BPMN linting tooling and the git hooks path.
+setup = "npm ci && npm run hooks:install"
 
 # Tear down the local Camunda stack when a workspace is archived.
 archive = "docker compose -f stack/docker-compose.yml down -v || true"
