@@ -67,18 +67,35 @@ class LeasingProcessAdapter(
         camundaClient.newCompleteUserTaskCommand(userTaskKey).variables(variables).send().join()
     }
 
-    private fun findActiveClarifyAlternativeTask(id: ApplicationId): Long =
-        camundaClient.newUserTaskSearchRequest()
+    private fun findActiveClarifyAlternativeTask(id: ApplicationId): Long {
+        // Match by reading each open task's applicationId variable rather than filtering the search by
+        // process-instance variables: on an Elasticsearch-backed cluster that variable filter is not
+        // reliably in sync with the task index (the task is searchable before the filter matches), so
+        // it would spuriously find nothing. The per-task variable read is the same path the task inbox
+        // uses and stays consistent with the task's own visibility.
+        val openTasks = camundaClient.newUserTaskSearchRequest()
             .filter { filter ->
                 filter.state(UserTaskState.CREATED)
                 filter.elementId(Elements.USER_TASK_CLARIFY_ALTERNATIVE.value)
-                filter.processInstanceVariables(
-                    mapOf(Variables.StartEventLeasingRequestReceived.APPLICATION_ID.value to id.value.toString()),
-                )
             }
             .send()
             .join()
             .items()
-            .single()
-            .userTaskKey
+        return openTasks
+            .firstOrNull { readApplicationId(it.userTaskKey) == id.value.toString() }
+            ?.userTaskKey
+            ?: throw NoSuchElementException(
+                "No active '${Elements.USER_TASK_CLARIFY_ALTERNATIVE.value}' task for application ${id.value}",
+            )
+    }
+
+    /** Zeebe returns variable values as JSON, so a string comes back quoted — strip the quotes. */
+    private fun readApplicationId(userTaskKey: Long): String? =
+        camundaClient.newUserTaskVariableSearchRequest(userTaskKey)
+            .send()
+            .join()
+            .items()
+            .firstOrNull { it.name == Variables.StartEventLeasingRequestReceived.APPLICATION_ID.value }
+            ?.value
+            ?.removeSurrounding("\"")
 }
