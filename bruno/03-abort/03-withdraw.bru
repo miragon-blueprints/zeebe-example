@@ -11,8 +11,6 @@ post {
 }
 
 script:pre-request {
-  // Let the bike order complete so there is something to compensate: wait for ORDERED. The withdraw
-  // subscription is an interrupting event subprocess, live for the whole instance, so no buffering risk.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "ORDERED");
 }

@@ -11,7 +11,6 @@ get {
 }
 
 script:pre-request {
-  // The alternative bike's handover flips the read model to HANDED_OVER; poll for it.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "HANDED_OVER");
 }

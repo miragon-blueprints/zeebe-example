@@ -11,7 +11,6 @@ post {
 }
 
 script:pre-request {
-  // Gate on the send-contract worker having set contractId so the contract-signed message correlates.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.contractId != null);
 }
