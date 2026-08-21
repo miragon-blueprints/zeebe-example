@@ -11,7 +11,9 @@ post {
 }
 
 script:pre-request {
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  // Gate on the send-contract worker having set contractId so the contract-signed message correlates.
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.contractId != null);
 }
 
 assert {

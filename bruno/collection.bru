@@ -1,0 +1,68 @@
+script:pre-request {
+  // ---------------------------------------------------------------------------
+  // Shared eventual-consistency polling helpers.
+  //
+  // Every command endpoint in this API is asynchronous (returns 202): it hands a
+  // command to Zeebe and returns immediately. The observable effect - the process
+  // reaching the next wait state, the read model updating, Elasticsearch indexing
+  // the search APIs - lands some unbounded time later. Asserting that effect after
+  // a fixed sleep races the projection and flakes under CI load.
+  //
+  // These helpers replace "sleep N ms, then check once" with "poll until the real
+  // condition holds, or fail after a generous cap". They return the instant the
+  // condition is met (fast in the common case) and only wait the full budget when
+  // something is genuinely wrong - at which point the request's own assertions
+  // report the real, still-wrong state instead of a bare timeout.
+  //
+  // Budgets are env-driven (pollTimeoutMs / pollIntervalMs) so a sibling blueprint
+  // with different propagation characteristics tunes them once, in one place.
+  // ---------------------------------------------------------------------------
+  const axios = require('axios');
+
+  const timeoutDefault = Number(bru.getEnvVar('pollTimeoutMs') || 20000);
+  const intervalDefault = Number(bru.getEnvVar('pollIntervalMs') || 500);
+
+  // Poll an arbitrary request until `predicate(data, status)` returns truthy.
+  // `config` is an axios request config ({ method, url, data, headers }).
+  // Resolves to the last response either way; never throws on HTTP status.
+  globalThis.pollUntil = async function (config, predicate, opts) {
+    opts = opts || {};
+    const timeoutMs = Number(opts.timeoutMs != null ? opts.timeoutMs : timeoutDefault);
+    const intervalMs = Number(opts.intervalMs != null ? opts.intervalMs : intervalDefault);
+    const deadline = Date.now() + timeoutMs;
+    let attempts = 0;
+    let last;
+    for (;;) {
+      attempts++;
+      try {
+        last = await axios(Object.assign({ validateStatus: () => true }, config));
+        if (predicate(last.data, last.status)) return last;
+      } catch (err) {
+        last = { status: 0, data: null, error: err.message };
+      }
+      if (Date.now() >= deadline) {
+        const where = (config.method || 'get').toUpperCase() + ' ' + config.url;
+        console.log('pollUntil: condition not met after ' + attempts + ' attempt(s) / '
+          + timeoutMs + 'ms (' + where + ', last status ' + (last && last.status) + ')');
+        return last;
+      }
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  };
+
+  // Poll the application read model: GET {{baseUrl}}{path} until predicate holds.
+  globalThis.pollApp = function (path, predicate, opts) {
+    return globalThis.pollUntil(
+      { method: 'get', url: bru.getEnvVar('baseUrl') + path },
+      predicate, opts);
+  };
+
+  // Poll a Camunda v2 search endpoint: POST {{camundaRest}}{path} with `body`
+  // (reads from Elasticsearch, hence the indexing lag) until predicate holds.
+  globalThis.pollSearch = function (path, body, predicate, opts) {
+    return globalThis.pollUntil(
+      { method: 'post', url: bru.getEnvVar('camundaRest') + path, data: body,
+        headers: { 'Content-Type': 'application/json' } },
+      predicate, opts);
+  };
+}

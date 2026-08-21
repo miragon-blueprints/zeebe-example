@@ -13,15 +13,10 @@ script:pre-request {
   // The clarify-alternative command is async (202): Zeebe advances the process, a job
   // worker completes the user task, and only then does the inbox read-model drop it.
   // A fixed sleep races that projection and flakes under CI load, so poll until the
-  // task is gone (or give up after ~20s and let the assertion report the real state).
-  const url = bru.getEnvVar("baseUrl") + "/api/tasks/clarify-alternative";
-  const applicationId = bru.getVar("applicationId");
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const inbox = await (await fetch(url)).json();
-    const stillThere = inbox.some((t) => t.applicationId === applicationId);
-    if (!stillThere) break;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
+  // task is gone (or give up after the cap and let the assertion report the real state).
+  const id = bru.getVar("applicationId");
+  await pollApp("/api/tasks/clarify-alternative",
+    (b) => Array.isArray(b) && !b.some((t) => t.applicationId === id));
 }
 
 assert {

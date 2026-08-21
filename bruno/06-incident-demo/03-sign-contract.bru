@@ -11,8 +11,10 @@ post {
 }
 
 script:pre-request {
-  // Wait for the job workers to drive the process to the contract-signature wait state.
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  // Wait for the job workers to drive the process to the contract-signature wait state: the
+  // send-contract worker sets contractId just before it parks there.
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.contractId != null);
 }
 
 assert {
