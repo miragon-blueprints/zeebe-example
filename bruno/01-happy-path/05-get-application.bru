@@ -16,11 +16,14 @@ script:pre-request {
 
 assert {
   res.status: eq 200
+  res.body.status: eq HANDED_OVER
 }
 
 docs {
-  The process now waits out the 14-day withdrawal period on a timer before it
-  reaches "leasing active". Zeebe timers cannot be fast-forwarded over REST on a
-  running broker, so that final transition is covered by the process test
+  Reporting the handover flips the read model to HANDED_OVER immediately, so that is
+  the deterministic state we assert here. The process then waits out the 14-day
+  withdrawal period on a timer before it reaches ACTIVE ("leasing active"). Zeebe
+  timers cannot be fast-forwarded over REST on a running broker, so that final
+  ORDERED/HANDED_OVER -> ACTIVE transition is covered by the process test
   (`increaseTime`) rather than here.
 }

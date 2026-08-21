@@ -24,7 +24,7 @@ updates:
 
   # Dev tooling (bpmnlint)
   - package-ecosystem: "npm"
-    directory: "/tools"
+    directory: "/"
     schedule:
       interval: "monthly"
     labels:

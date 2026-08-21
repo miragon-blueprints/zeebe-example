@@ -1,0 +1,27 @@
+meta {
+  name: Manually retry by resolving the incident (Operate "Retry" equivalent)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{camundaRest}}/incidents/{{incidentKey}}/resolution
+  body: none
+  auth: none
+}
+
+docs {
+  # Manual retry, part 2 of 2
+
+  Resolving the incident re-activates the job that `05-reset-job-retries` re-armed —
+  together they are the API equivalent of Operate's "Retry" button. Because BIKE-FAIL
+  is a *permanent* simulated outage, the job runs, fails again, and the incident
+  returns once the fresh retries are exhausted. That is the teaching point: a manual
+  retry re-runs the work but is not a fix for a systematic error. To demonstrate an
+  actual fix, start a fresh request with a valid bike id (e.g. BIKE-900) and watch it
+  complete.
+}
+
+assert {
+  res.status: eq 204
+}

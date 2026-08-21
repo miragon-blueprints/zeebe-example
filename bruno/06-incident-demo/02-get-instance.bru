@@ -1,0 +1,37 @@
+meta {
+  name: Find the process instance
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{camundaRest}}/process-instances/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processDefinitionId": "bikeLeasingProcess",
+      "variables": [
+        { "name": "applicationId", "value": "\"{{applicationId}}\"" }
+      ]
+    }
+  }
+}
+
+script:pre-request {
+  // Camunda 8 has no business key: the applicationId travels as a process variable, so we look the
+  // instance up by variable. The v2 search API reads from Elasticsearch, so give it a moment to index.
+  await new Promise((resolve) => setTimeout(resolve, 2500));
+}
+
+assert {
+  res.status: eq 200
+  res.body.items[0].processInstanceKey: isDefined
+}
+
+vars:post-response {
+  processInstanceKey: res.body.items[0].processInstanceKey
+}
