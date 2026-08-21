@@ -11,8 +11,6 @@ post {
 }
 
 script:pre-request {
-  // The send-contract worker sets contractId (status stays RECEIVED) just before the process parks
-  // at the contract-signed catch event; gate on contractId so the message publish can correlate.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.contractId != null);
 }

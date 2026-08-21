@@ -11,8 +11,6 @@ get {
 }
 
 script:pre-request {
-  // validate -> DMN -> send-contract run through the async job workers; wait until the
-  // read model exists rather than guessing how long that chain takes.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.applicationId === id);
 }

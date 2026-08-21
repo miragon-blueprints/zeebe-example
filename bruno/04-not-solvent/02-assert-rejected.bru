@@ -11,7 +11,6 @@ get {
 }
 
 script:pre-request {
-  // validate -> DMN (age < 18 => not solvent) -> send-rejection runs async; poll for REJECTED.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "REJECTED");
 }

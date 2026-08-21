@@ -11,8 +11,6 @@ post {
 }
 
 script:pre-request {
-  // Reach the "wait for signature" state after submission: gate on the send-contract worker
-  // having set contractId so the contract-signed message correlates.
   const id = bru.getVar("applicationId");
   await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.contractId != null);
 }

@@ -20,8 +20,6 @@ body:json {
 }
 
 script:pre-request {
-  // withdrawal triggers compensation -> cancelBikeOrder parks on its form-only user task.
-  // Poll the v2 search (Elasticsearch-backed) until the created task is indexed.
   await pollSearch("/user-tasks/search",
     { filter: { elementId: "userTask_clarifyReturn", state: "CREATED" } },
     (b) => b && Array.isArray(b.items) && b.items.length > 0 && b.items[0].userTaskKey != null);
