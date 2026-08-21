@@ -11,8 +11,8 @@ get {
 }
 
 script:pre-request {
-  // validate -> DMN -> send-contract run through the async job workers
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.applicationId === id);
 }
 
 assert {

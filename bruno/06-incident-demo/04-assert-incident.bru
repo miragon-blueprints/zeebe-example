@@ -21,9 +21,11 @@ body:json {
 }
 
 script:pre-request {
-  // The order job retries 3 times, 10s apart, before Zeebe raises the incident at 0 retries.
-  // Wait out the retry window (plus Elasticsearch indexing) so the incident exists by the time we query.
-  await new Promise((resolve) => setTimeout(resolve, 40000));
+  const id = bru.getVar("processInstanceKey");
+  await pollSearch("/incidents/search",
+    { filter: { processInstanceKey: id, state: "ACTIVE", errorType: "JOB_NO_RETRIES" } },
+    (b) => b && Array.isArray(b.items) && b.items.length >= 1,
+    { timeoutMs: 60000 });
 }
 
 assert {

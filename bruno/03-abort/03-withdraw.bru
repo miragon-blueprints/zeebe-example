@@ -11,8 +11,8 @@ post {
 }
 
 script:pre-request {
-  // let the bike order + insurance complete so there is something to compensate
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "ORDERED");
 }
 
 assert {

@@ -22,9 +22,11 @@ body:json {
 }
 
 script:pre-request {
-  // Camunda 8 has no business key: the applicationId travels as a process variable, so we look the
-  // instance up by variable. The v2 search API reads from Elasticsearch, so give it a moment to index.
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  const id = bru.getVar("applicationId");
+  await pollSearch("/process-instances/search",
+    { filter: { processDefinitionId: "bikeLeasingProcess",
+      variables: [{ name: "applicationId", value: `"${id}"` }] } },
+    (b) => b && Array.isArray(b.items) && b.items.length > 0 && b.items[0].processInstanceKey != null);
 }
 
 assert {

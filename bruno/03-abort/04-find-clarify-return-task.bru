@@ -20,8 +20,9 @@ body:json {
 }
 
 script:pre-request {
-  // withdrawal triggers compensation -> cancelBikeOrder parks on its form-only user task
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  await pollSearch("/user-tasks/search",
+    { filter: { elementId: "userTask_clarifyReturn", state: "CREATED" } },
+    (b) => b && Array.isArray(b.items) && b.items.length > 0 && b.items[0].userTaskKey != null);
 }
 
 assert {
