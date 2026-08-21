@@ -137,7 +137,7 @@ npm ci && npm run lint:bpmn
 ./gradlew build
 
 # 5. drive the REST scenarios against the running app
-cd bruno && npx @usebruno/cli run . --env local -r
+cd bruno && npx @usebruno/cli@4.0.0 run . --env local -r
 ```
 
 Operate and Tasklist are at `http://localhost:8080` (`demo` / `demo`). The Spring app runs on **8081**

@@ -11,7 +11,9 @@ get {
 }
 
 script:pre-request {
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  // Withdrawal triggers compensation; poll until the read model settles on CANCELLED.
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "CANCELLED");
 }
 
 assert {

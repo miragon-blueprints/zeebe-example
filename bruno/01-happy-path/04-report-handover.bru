@@ -11,8 +11,11 @@ post {
 }
 
 script:pre-request {
-  // sign -> fork (insure + order bike) -> join -> handover wait state
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+  // sign -> fork (insure + order bike) -> join -> handover wait state. The order worker sets
+  // ORDERED + orderId; once we see that, the token is at (or moving to) the handover catch event,
+  // and the message publish buffers (10s TTL) until the subscription opens.
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "ORDERED" && b.orderId != null);
 }
 
 assert {

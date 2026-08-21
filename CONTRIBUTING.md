@@ -41,7 +41,7 @@ workspace runs `nonconcurrent` (see [ADR-0006](docs/adr/0006-fixed-ports-for-v1-
 With the stack and backend running, drive the API scenarios and confirm the operational surface:
 
 ```bash
-cd bruno && npx --yes @usebruno/cli run . --env local -r   # the end-to-end API scenarios
+cd bruno && npx --yes @usebruno/cli@4.0.0 run . --env local -r   # the end-to-end API scenarios
 ```
 
 Confirm <http://localhost:8081/swagger-ui.html>, <http://localhost:8081/actuator/health> (status
