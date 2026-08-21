@@ -8,6 +8,7 @@ bpmn_to_code_version = "3.1.0"
 bpmn_to_code_testing_version = "5.0.0"
 archunit_version = "1.4.2"
 konsist_version = "0.17.3"
+springdoc_version = "3.0.3"   # 3.x = the Spring Boot 4 line; 3.0.x tracks Spring Boot 4.0.x
 mockk_version = "1.14.11"
 spring_mockk_version = "5.0.1"
 mockito_version = "5.2.0"
@@ -22,9 +23,18 @@ web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref
 devtools = { module = "org.springframework.boot:spring-boot-devtools", version.ref = "spring_version" }
 jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa", version.ref = "spring_version" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres_version" }
+flyway = { module = "org.springframework.boot:spring-boot-starter-flyway", version.ref = "spring_version" }
+flyway-postgres = { module = "org.flywaydb:flyway-database-postgresql" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin_version" }
 kotlin_logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin_logging_version" }
 jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+
+# OpenAPI — springdoc generates the contract served at /v3/api-docs and the Swagger UI
+springdoc = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc_version" }
+
+# Observability — actuator probes (health/liveness/readiness, info, metrics) and a Prometheus registry
+actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "spring_version" }
+prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }   # version pinned by the Spring Boot BOM
 
 # Camunda 8 / Zeebe
 zeebeSdk = { module = "io.camunda:camunda-spring-boot-starter", version.ref = "zeebe_version" }
@@ -51,8 +61,8 @@ h2 = { module = "com.h2database:h2", version.ref = "h2_version" }
 junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher", version = "6.1.0" }
 
 [bundles]
-defaultService = ["kotlin-reflect", "kotlin_logging", "jackson-kotlin", "devtools", "web", "zeebeSdk"]
-database = ["jpa", "postgres"]
+defaultService = ["kotlin-reflect", "kotlin_logging", "jackson-kotlin", "devtools", "web", "zeebeSdk", "actuator", "prometheus"]
+database = ["jpa", "postgres", "flyway", "flyway-postgres"]
 test = ["spring_test", "spring_webTest", "spring_dataJpaTest", "mockito", "mockk", "spring_mockk", "kotlin_mockito", "testcontainers"]
 archunit = ["archunit"]
 konsist = ["konsist"]
@@ -67,3 +77,4 @@ springframework = { id = "org.springframework.boot", version.ref = "spring_versi
 spring-dependency = { id = "io.spring.dependency-management", version.ref = "spring_dependency_version" }
 bpmnToCode = { id = "io.miragon.bpmn-to-code-gradle", version.ref = "bpmn_to_code_version" }
 gradleRetryTesting = { id = "org.gradle.test-retry", version = "1.6.5" }
+pitest = { id = "info.solidsoft.pitest", version = "1.19.0" }
