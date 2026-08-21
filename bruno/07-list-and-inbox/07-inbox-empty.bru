@@ -10,8 +10,18 @@ get {
 }
 
 script:pre-request {
-  // Wait for the clarification to be completed and the task to leave the inbox.
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  // The clarify-alternative command is async (202): Zeebe advances the process, a job
+  // worker completes the user task, and only then does the inbox read-model drop it.
+  // A fixed sleep races that projection and flakes under CI load, so poll until the
+  // task is gone (or give up after ~20s and let the assertion report the real state).
+  const url = bru.getEnvVar("baseUrl") + "/api/tasks/clarify-alternative";
+  const applicationId = bru.getVar("applicationId");
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const inbox = await (await fetch(url)).json();
+    const stillThere = inbox.some((t) => t.applicationId === applicationId);
+    if (!stillThere) break;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 assert {
