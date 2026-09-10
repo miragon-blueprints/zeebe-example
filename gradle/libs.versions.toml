@@ -1,9 +1,9 @@
 [versions]
-spring_version = "4.1.0"
+spring_version = "4.1.1"
 spring_dependency_version = "1.1.7"
 kotlin_version = "2.4.10"
 kotlin_logging_version = "3.0.5"
-zeebe_version = "8.9.16"
+zeebe_version = "8.9.17"
 bpmn_to_code_version = "5.2.0"
 bpmn_to_code_testing_version = "5.2.0"
 archunit_version = "1.5.0"
