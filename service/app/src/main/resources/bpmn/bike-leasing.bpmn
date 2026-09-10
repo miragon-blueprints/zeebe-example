@@ -630,7 +630,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="flow_notSignedToRejectionJoin_di" bpmnElement="flow_notSignedToRejectionJoin">
         <di:waypoint x="650" y="416" />
-        <di:waypoint x="655" y="470" />
+        <di:waypoint x="680" y="416" />
+        <di:waypoint x="680" y="445" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="flow_validateToCheckCredit_di" bpmnElement="flow_validateToCheckCredit">
         <di:waypoint x="260" y="250" />
