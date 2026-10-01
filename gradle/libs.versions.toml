@@ -1,21 +1,21 @@
 [versions]
 spring_version = "4.1.1"
 spring_dependency_version = "1.1.7"
-kotlin_version = "2.4.10"
+kotlin_version = "2.4.20"
 kotlin_logging_version = "3.0.5"
-zeebe_version = "8.9.17"
+zeebe_version = "8.9.21"
 bpmn_to_code_version = "5.2.0"
 bpmn_to_code_testing_version = "5.2.0"
-archunit_version = "1.5.0"
+archunit_version = "1.5.1"
 konsist_version = "0.17.3"
-springdoc_version = "3.1.0"   # 3.x = the Spring Boot 4 line; 3.0.x tracks Spring Boot 4.0.x
+springdoc_version = "3.1.1"   # 3.x = the Spring Boot 4 line; 3.0.x tracks Spring Boot 4.0.x
 mockk_version = "1.14.11"
 spring_mockk_version = "5.0.1"
 mockito_version = "5.2.0"
-kotlin_mockito_version = "6.3.0"
+kotlin_mockito_version = "6.4.0"
 testcontainers_version = "2.0.5"
 postgres_version = "42.7.13"
-h2_version = "2.4.240"
+h2_version = "2.5.252"
 
 [libraries]
 # Application
@@ -76,5 +76,5 @@ kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin_version"
 springframework = { id = "org.springframework.boot", version.ref = "spring_version" }
 spring-dependency = { id = "io.spring.dependency-management", version.ref = "spring_dependency_version" }
 bpmnToCode = { id = "io.miragon.bpmn-to-code-gradle", version.ref = "bpmn_to_code_version" }
-gradleRetryTesting = { id = "org.gradle.test-retry", version = "1.6.5" }
+gradleRetryTesting = { id = "org.gradle.test-retry", version = "1.6.6" }
 pitest = { id = "info.solidsoft.pitest", version = "1.19.0" }
