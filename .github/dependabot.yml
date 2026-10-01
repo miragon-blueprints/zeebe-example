@@ -15,6 +15,12 @@ updates:
     patterns:
       - "*"
     multi-ecosystem-group: "backend"
+    # Konsist 0.17.3 cannot parse sources under Kotlin 2.4.20 (KoInternalException)
+    ignore:
+      - dependency-name: "org.jetbrains.kotlin:*"
+        versions: [">=2.4.20"]
+      - dependency-name: "org.jetbrains.kotlin.*"
+        versions: [">=2.4.20"]
 
   - package-ecosystem: "docker-compose"
     directory: "/stack"
