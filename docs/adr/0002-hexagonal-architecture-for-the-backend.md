@@ -23,7 +23,7 @@ We structure `service/app` as a **hexagon (ports & adapters)** under `io.miragon
   service or any inbound port.
 - `adapter/inbound/{rest,zeebe}` — driving adapters (REST controllers, Zeebe `@JobWorker` handlers).
 - `adapter/outbound/{db,zeebe,dealer,notification,contract,insurance}` — driven adapters.
-- `adapter/process` — the **generated** `*ProcessApi` (bpmn-to-code) constants; a technical seam that
+- `adapter/process` — the **generated** `*ProcessApi` and shared constants (bpmn-to-code); a technical seam that
   fits neither side of the split.
 
 These rules are **enforced by the reusable ArchUnit + Konsist suite** in

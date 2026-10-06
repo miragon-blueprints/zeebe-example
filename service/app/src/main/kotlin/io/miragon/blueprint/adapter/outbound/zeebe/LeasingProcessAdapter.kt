@@ -2,9 +2,8 @@ package io.miragon.blueprint.adapter.outbound.zeebe
 
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.search.enums.UserTaskState
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Elements
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Messages
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Variables
+import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
+import io.miragon.blueprint.adapter.process.Messages
 import io.miragon.blueprint.application.port.outbound.LeasingProcess
 import io.miragon.blueprint.domain.bike.BikeId
 import io.miragon.blueprint.domain.leasing.ApplicationId
@@ -26,7 +25,7 @@ class LeasingProcessAdapter(
 ) : LeasingProcess {
 
     override fun submitRequest(application: LeasingApplication) {
-        val start = Variables.StartEventLeasingRequestReceived
+        val start = FlowNodes.StartEventLeasingRequestReceived.Variables
         // Publishing the leasing-request message starts a new instance via the message start event.
         engineApi.sendMessage(
             messageName = Messages.MIRAVELO_LEASING_REQUEST_RECEIVED,
@@ -60,9 +59,9 @@ class LeasingProcessAdapter(
     ) {
         val userTaskKey = findActiveClarifyAlternativeTask(id)
         val variables = buildMap<String, Any> {
-            put(Variables.UserTaskClarifyAlternative.ALTERNATIVE_FOUND.value, alternativeFound)
+            put(FlowNodes.UserTaskClarifyAlternative.Variables.ALTERNATIVE_FOUND.value, alternativeFound)
             // The re-order reads the same start-injected bike variable, so reuse its name.
-            bikeId?.let { put(Variables.StartEventLeasingRequestReceived.BIKE_ID.value, it.value) }
+            bikeId?.let { put(FlowNodes.StartEventLeasingRequestReceived.Variables.BIKE_ID.value, it.value) }
         }
         camundaClient.newCompleteUserTaskCommand(userTaskKey).variables(variables).send().join()
     }
@@ -76,7 +75,7 @@ class LeasingProcessAdapter(
         val openTasks = camundaClient.newUserTaskSearchRequest()
             .filter { filter ->
                 filter.state(UserTaskState.CREATED)
-                filter.elementId(Elements.USER_TASK_CLARIFY_ALTERNATIVE.value)
+                filter.elementId(FlowNodes.UserTaskClarifyAlternative.id.value)
             }
             .send()
             .join()
@@ -85,7 +84,7 @@ class LeasingProcessAdapter(
             .firstOrNull { readApplicationId(it.userTaskKey) == id.value.toString() }
             ?.userTaskKey
             ?: throw NoSuchElementException(
-                "No active '${Elements.USER_TASK_CLARIFY_ALTERNATIVE.value}' task for application ${id.value}",
+                "No active '${FlowNodes.UserTaskClarifyAlternative.id.value}' task for application ${id.value}",
             )
     }
 
@@ -95,7 +94,7 @@ class LeasingProcessAdapter(
             .send()
             .join()
             .items()
-            .firstOrNull { it.name == Variables.StartEventLeasingRequestReceived.APPLICATION_ID.value }
+            .firstOrNull { it.name == FlowNodes.StartEventLeasingRequestReceived.Variables.APPLICATION_ID.value }
             ?.value
             ?.removeSurrounding("\"")
 }

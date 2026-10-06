@@ -53,7 +53,7 @@ service/
     adapter/outbound/zeebe      drives the engine (ProcessEngineApi / CamundaClient / task inbox)
     adapter/outbound/db         JPA persistence (leasing applications + bike portfolio)
     adapter/outbound/dealer     simulated bike dealer (stock check + order)
-    adapter/process             generated *ProcessApi (bpmn-to-code) constants
+    adapter/process             generated *ProcessApi + shared constants (bpmn-to-code)
     application/{port,service}  use-case ports and their services
     domain/{leasing,bike}       pure domain model
     resources/{bpmn,dmn,forms}  the process models and Camunda Forms
@@ -74,8 +74,10 @@ stack/                         Camunda 8 self-managed dev stack (docker compose)
   publish message), and classpath **auto-deployment** of every `.bpmn`, `.dmn` and `.form` on startup —
   any service that depends on it gets a working Zeebe integration for free.
 - **Generated process API:** the [`bpmn-to-code`](https://github.com/emaarco/bpmn-to-code) Gradle
-  plugin turns each `.bpmn` into a typed `*ProcessApi` object, so element ids, messages, job types,
-  timers and variables are compile-checked constants used by both workers and tests.
+  plugin turns each `.bpmn` into a typed, node-centric `*ProcessApi` object (`FlowNodes.<Node>` with
+  its id, variables and successors) plus shared `ServiceTasks`/`Messages`/`ProcessVariables` files, so
+  element ids, messages, job types, timers and variables are compile-checked constants used by both
+  workers and tests.
 - **Forms:** Camunda 8 Forms (`.form`) are deployed with the process and render in the Tasklist for the
   user tasks.
 - **BPMN linting:** [`bpmnlint`](https://github.com/bpmn-io/bpmnlint) at the **repo root**
