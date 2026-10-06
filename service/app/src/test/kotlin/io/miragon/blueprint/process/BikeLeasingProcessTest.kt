@@ -8,7 +8,7 @@ import io.camunda.process.test.api.CamundaSpringProcessTest
 import io.camunda.process.test.api.assertions.ProcessInstanceSelectors
 import io.miragon.blueprint.adapter.outbound.zeebe.LeasingProcessAdapter
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Elements
+import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
 import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi
 import io.miragon.blueprint.application.port.inbound.ActivateLeasingUseCase
 import io.miragon.blueprint.application.port.inbound.BookCancellationCostsUseCase
@@ -29,7 +29,14 @@ import io.miragon.blueprint.domain.leasing.CustomerName
 import io.miragon.blueprint.domain.leasing.Email
 import io.miragon.blueprint.domain.leasing.LeasingApplication
 import io.miragon.blueprint.domain.leasing.LeasingStatus
+import io.miragon.bpmn.runtime.path.ProcessPath
+import io.miragon.bpmn.runtime.path.enter
+import io.miragon.bpmn.runtime.path.inside
+import io.miragon.bpmn.runtime.path.onto
+import io.miragon.bpmn.runtime.path.then
+import io.miragon.bpmn.runtime.path.throwingCompensation
 import io.miragon.common.test.assertions.hasCompletedElements
+import io.miragon.common.test.assertions.hasCompletedElementsInOrder
 import io.miragon.common.test.config.TestProcessEngineConfiguration
 import io.mockk.every
 import io.mockk.verify
@@ -116,29 +123,37 @@ class BikeLeasingProcessTest {
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
 
         // wait until the contract was sent and the process parks on the await-signature gateway
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.SERVICE_TASK_SEND_CONTRACT)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.ServiceTaskSendContract)
         process.correlateContractSigned(id)
 
         // the fork runs insurance + bike order, then joins and parks on the handover message
         CamundaAssert.assertThatProcessInstance(instance)
-            .hasCompletedElements(Elements.SERVICE_TASK_ISSUE_INSURANCE_POLICY, Elements.SERVICE_TASK_ORDER_BIKE)
+            .hasCompletedElements(FlowNodes.ServiceTaskIssueInsurancePolicy, FlowNodes.ServiceTaskOrderBike)
         process.correlateHandoverReported(id)
 
         // the 14-day withdrawal period elapses
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.EVENT_HANDOVER_REPORTED)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.EventHandoverReported)
         processTestContext.increaseTime(Duration.ofDays(14).plusHours(1))
 
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
-            Elements.SERVICE_TASK_VALIDATE_APPLICATION,
-            Elements.BUSINESS_RULE_TASK_CHECK_CREDIT_RATING,
-            Elements.SERVICE_TASK_SEND_CONTRACT,
-            Elements.SERVICE_TASK_ISSUE_INSURANCE_POLICY,
-            Elements.SERVICE_TASK_ORDER_BIKE,
-            Elements.EVENT_HANDOVER_REPORTED,
-            Elements.SERVICE_TASK_ACTIVATE_LEASING,
-            Elements.END_EVENT_LEASING_ACTIVE,
-        )
+        CamundaAssert.assertThatProcessInstance(instance)
+            .hasCompletedElementsInOrder(
+                pathUntilContractSigned()
+                    .then { it.gatewayFork }
+                    .then { it.serviceTaskIssueInsurancePolicy }
+                    .then { it.gatewayJoin }
+                    .then { it.eventHandoverReported }
+                    .then { it.eventWithdrawalPeriodElapsed }
+                    .then { it.serviceTaskActivateLeasing }
+                    .then { it.endEventLeasingActive },
+            )
+            .hasCompletedElementsInOrder(
+                ProcessPath.from(FlowNodes.GatewayFork)
+                    .then { it.gatewayBikeSourceJoin }
+                    .then { it.serviceTaskOrderBike }
+                    .then { it.gatewayBikeAvailable }
+                    .then { it.gatewayJoin },
+            )
         verify(exactly = 1) { sendContractUseCase.sendContract(id) }
         verify(exactly = 1) { issueInsurancePolicyUseCase.issuePolicy(id) }
         verify(exactly = 1) { activateLeasingUseCase.activate(id) }
@@ -151,16 +166,19 @@ class BikeLeasingProcessTest {
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
 
         // park on the await-signature gateway, then let the 14-day signature deadline elapse
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.SERVICE_TASK_SEND_CONTRACT)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.ServiceTaskSendContract)
         processTestContext.increaseTime(Duration.ofDays(14).plusHours(1))
 
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
-            Elements.EVENT_SIGNATURE_DEADLINE,
-            Elements.EVENT_CONTRACT_NOT_SIGNED,
-            Elements.SERVICE_TASK_SEND_REJECTION,
-            Elements.END_EVENT_APPLICATION_REJECTED,
-        )
+        CamundaAssert.assertThatProcessInstance(instance)
+            .hasCompletedElementsInOrder(pathUntilSignatureAwaited().then { it.eventSignatureDeadline })
+            .hasTerminatedElements(FlowNodes.EndEventNotSigned.ELEMENT_ID)
+            .hasCompletedElementsInOrder(
+                ProcessPath.from(FlowNodes.EventContractNotSigned)
+                    .then { it.gatewayRejectionJoin }
+                    .then { it.serviceTaskSendRejection }
+                    .then { it.endEventApplicationRejected },
+            )
         verify(exactly = 1) { rejectApplicationUseCase.reject(id) }
     }
 
@@ -172,11 +190,11 @@ class BikeLeasingProcessTest {
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
 
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
-            Elements.SERVICE_TASK_VALIDATE_APPLICATION,
-            Elements.BUSINESS_RULE_TASK_CHECK_CREDIT_RATING,
-            Elements.SERVICE_TASK_SEND_REJECTION,
-            Elements.END_EVENT_APPLICATION_REJECTED,
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElementsInOrder(
+            pathUntilCreditRatingChecked()
+                .then { it.gatewayRejectionJoin }
+                .then { it.serviceTaskSendRejection }
+                .then { it.endEventApplicationRejected },
         )
         verify(exactly = 1) { rejectApplicationUseCase.reject(id) }
         verify(exactly = 0) { sendContractUseCase.sendContract(any()) }
@@ -191,24 +209,26 @@ class BikeLeasingProcessTest {
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
 
         // drive to the handover wait state (contract signed, bike ordered, insured)
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.SERVICE_TASK_SEND_CONTRACT)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.ServiceTaskSendContract)
         process.correlateContractSigned(id)
         CamundaAssert.assertThatProcessInstance(instance)
-            .hasCompletedElements(Elements.SERVICE_TASK_ISSUE_INSURANCE_POLICY, Elements.SERVICE_TASK_ORDER_BIKE)
+            .hasCompletedElements(FlowNodes.ServiceTaskIssueInsurancePolicy, FlowNodes.ServiceTaskOrderBike)
 
         // withdraw -> compensation. The cancelBikeOrder call activity runs in its own (child)
         // process instance and parks on its clarify-return task, so we look it up by element id only.
         process.correlateApplicationWithdrawn(id)
-        awaitUserTaskCreated(CancelBikeOrderProcessApi.Elements.USER_TASK_CLARIFY_RETURN.value)
-        processTestContext.completeUserTask(CancelBikeOrderProcessApi.Elements.USER_TASK_CLARIFY_RETURN.value)
+        awaitUserTaskCreated(CancelBikeOrderProcessApi.FlowNodes.UserTaskClarifyReturn.ELEMENT_ID)
+        processTestContext.completeUserTask(CancelBikeOrderProcessApi.FlowNodes.UserTaskClarifyReturn.ELEMENT_ID)
 
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
         CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
-            Elements.SERVICE_TASK_CANCEL_CONTRACT,
-            Elements.SERVICE_TASK_CANCEL_POLICY,
-            Elements.CALL_ACTIVITY_CANCEL_BIKE_ORDER,
-            Elements.SERVICE_TASK_SEND_CANCELLATION_CONFIRMATION,
-            Elements.END_EVENT_APPLICATION_CANCELLED,
+            ProcessPath.from(FlowNodes.StartEventApplicationWithdrawn)
+                .then { it.eventReverseApplication }
+                .throwingCompensation(FlowNodes.EventCompensateContract) { it.serviceTaskCancelContract }
+                .throwingCompensation(FlowNodes.EventCompensateInsurance) { it.serviceTaskCancelPolicy }
+                .throwingCompensation(FlowNodes.EventCompensateOrder) { it.callActivityCancelBikeOrder }
+                .then { it.serviceTaskSendCancellationConfirmation }
+                .then { it.endEventApplicationCancelled },
         )
         verify(exactly = 1) { cancelContractUseCase.cancelContract(id) }
         verify(exactly = 1) { cancelInsurancePolicyUseCase.cancelPolicy(id) }
@@ -228,29 +248,64 @@ class BikeLeasingProcessTest {
         val instanceKey = awaitProcessInstance()
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
 
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.SERVICE_TASK_SEND_CONTRACT)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.ServiceTaskSendContract)
         process.correlateContractSigned(id)
 
         // the first order finds nothing -> parks on the clarify-alternative user task
-        awaitUserTaskCreated(Elements.USER_TASK_CLARIFY_ALTERNATIVE.value, instanceKey)
+        awaitUserTaskCreated(FlowNodes.UserTaskClarifyAlternative.ELEMENT_ID, instanceKey)
         processTestContext.completeUserTask(
-            Elements.USER_TASK_CLARIFY_ALTERNATIVE.value,
+            FlowNodes.UserTaskClarifyAlternative.ELEMENT_ID,
             mapOf("alternativeFound" to true, "bikeId" to "BIKE-ALT"),
         )
 
         // re-order succeeds -> join -> handover -> withdrawal period
         process.correlateHandoverReported(id)
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(Elements.EVENT_HANDOVER_REPORTED)
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(FlowNodes.EventHandoverReported)
         processTestContext.increaseTime(Duration.ofDays(14).plusHours(1))
 
         CamundaAssert.assertThatProcessInstance(instance).isCompleted()
-        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElements(
-            Elements.USER_TASK_CLARIFY_ALTERNATIVE,
-            Elements.SERVICE_TASK_ORDER_BIKE,
-            Elements.END_EVENT_LEASING_ACTIVE,
+        CamundaAssert.assertThatProcessInstance(instance).hasCompletedElementsInOrder(
+            ProcessPath.from(FlowNodes.GatewayFork)
+                .then { it.gatewayBikeSourceJoin }
+                .then { it.serviceTaskOrderBike }
+                .then { it.gatewayBikeAvailable }
+                .then { it.userTaskClarifyAlternative }
+                .then { it.gatewayAlternativeFound }
+                .then { it.gatewayBikeSourceJoin }
+                .then { it.serviceTaskOrderBike }
+                .then { it.gatewayBikeAvailable }
+                .then { it.gatewayJoin }
+                .then { it.eventHandoverReported }
+                .then { it.eventWithdrawalPeriodElapsed }
+                .then { it.serviceTaskActivateLeasing }
+                .then { it.endEventLeasingActive },
         )
         verify(exactly = 2) { orderBikeUseCase.orderBike(id) }
     }
+
+    private fun pathUntilCreditRatingChecked() =
+        ProcessPath.from(FlowNodes.StartEventLeasingRequestReceived)
+            .then { it.serviceTaskValidateApplication }
+            .then { it.businessRuleTaskCheckCreditRating }
+            .then { it.gatewayIsSolvent }
+
+    private fun pathUntilSignatureAwaited() =
+        pathUntilCreditRatingChecked()
+            .onto { it.subProcessConcludeContract }
+            .enter { it.startEventCustomerEligible }
+            .then { it.serviceTaskSendContract }
+            .then { it.gatewayAwaitSignature }
+
+    private fun pathUntilContractSigned() =
+        pathUntilCreditRatingChecked()
+            .onto { it.subProcessConcludeContract }
+            .inside {
+                enter { it.startEventCustomerEligible }
+                    .then { it.serviceTaskSendContract }
+                    .then { it.gatewayAwaitSignature }
+                    .then { it.eventContractSigned }
+                    .then { it.endEventContractValid }
+            }
 
     private fun submit(age: Int, income: Double, bikeId: String = "BIKE-TEST"): ApplicationId {
         val application =

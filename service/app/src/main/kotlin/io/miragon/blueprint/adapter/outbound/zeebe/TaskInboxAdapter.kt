@@ -2,8 +2,7 @@ package io.miragon.blueprint.adapter.outbound.zeebe
 
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.search.enums.UserTaskState
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Elements
-import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.Variables
+import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
 import io.miragon.blueprint.application.port.outbound.TaskInboxPort
 import io.miragon.blueprint.domain.leasing.ApplicationId
 import org.springframework.stereotype.Component
@@ -20,13 +19,13 @@ class TaskInboxAdapter(
     private val camundaClient: CamundaClient,
 ) : TaskInboxPort {
 
-    private val applicationIdVariable = Variables.StartEventLeasingRequestReceived.APPLICATION_ID.value
+    private val applicationIdVariable = FlowNodes.StartEventLeasingRequestReceived.Variables.APPLICATION_ID.value
 
     override fun findOpenClarifications(): List<TaskInboxPort.OpenClarification> {
         val openTasks = camundaClient.newUserTaskSearchRequest()
             .filter { filter ->
                 filter.state(UserTaskState.CREATED)
-                filter.elementId(Elements.USER_TASK_CLARIFY_ALTERNATIVE.value)
+                filter.elementId(FlowNodes.UserTaskClarifyAlternative.id.value)
             }
             .send()
             .join()

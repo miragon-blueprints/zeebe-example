@@ -58,8 +58,9 @@ before writing code. The hard rules:
   root package, so `io.miragon.blueprint.config` would fail. Cross-cutting `@Configuration` (CORS,
   OpenAPI, error handling) goes in `adapter.inbound.rest` — the `Configuration` suffix is whitelisted
   there.
-- **`adapter/process` is generated.** Never hand-edit `*ProcessApi.kt`; edit the `.bpmn` and re-run
-  `generateBpmnModels`.
+- **`adapter/process` is generated.** Never hand-edit `*ProcessApi.kt` or the shared
+  `ServiceTasks`/`Messages`/`ProcessVariables`/`Errors`/`Escalations` files; edit the `.bpmn` and
+  re-run `generateBpmnModels`.
 - **Suffixes:** inbound port `UseCase|Query`; outbound `Port|Repository|Process`; service
   `Service|Configuration`; `adapter.inbound.rest` `Controller|Dto|Input|Mapper|Configuration`;
   `adapter.inbound.zeebe` `Worker`; `adapter.outbound` `PersistenceAdapter|Adapter|Mapper|Entity|Repository`.
@@ -69,6 +70,13 @@ before writing code. The hard rules:
 
 - `bpmn-to-code` generates typed process constants from the models at build time; the
   `BikeLeasingModelValidationTest` (`BpmnRules.all()` for Zeebe) validates the models' structure.
+- The generated `adapter/process` sources are committed and **drift-gated**: `./gradlew build`
+  regenerates them in place, and CI runs `git diff --exit-code` on the package, so a `.bpmn` edit
+  without a regenerate fails the build — same contract as the OpenAPI spec (ADR-0003).
+- Since bpmn-to-code 6 the API is node-centric: `<Process>ProcessApi.FlowNodes.<Node>` carries the
+  element (`.id`, `ELEMENT_ID`), its `Variables` and its successors (`Next`). Process tests assert
+  the walked path as a compile-checked `ProcessPath` (`common-zeebe-test`'s
+  `CamundaAssertExtensions.kt`) instead of hand-maintained element-id lists.
 - `bpmnlint` (`bpmnlint:recommended` + `camunda-compat/camunda-cloud-8-9` + `@miragon/rules/all`)
   runs on staged `.bpmn` via `.githooks/pre-commit` (install: `npm run hooks:install`). Element ids
   follow the `flow_`/`event_`/`gateway_`/`serviceTask_` conventions the rules enforce.
@@ -83,7 +91,7 @@ TDD. Match the test style to the layer:
 | application service | mockk unit tests (mock the ports) |
 | `adapter.inbound.rest` | `@WebMvcTest` + MockkBean |
 | `adapter.outbound.db` | Spring Data JPA slice tests |
-| process end-to-end | Camunda 8 process tests (`@CamundaSpringProcessTest`, in-container Zeebe) |
+| process end-to-end | Camunda 8 process tests (`@CamundaSpringProcessTest`, in-container Zeebe), paths asserted via `ProcessPath` |
 
 **Mutation testing gates PRs at 80** (`:service:app:pitest`): a test that executes without asserting
 will fail CI. Coverage says a line ran; mutation says a test would have noticed. The PR gate runs

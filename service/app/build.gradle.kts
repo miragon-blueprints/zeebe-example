@@ -71,7 +71,7 @@ pitest {
     excludedClasses.set(
         listOf(
             // Generated typed process API — not hand-written logic.
-            "io.miragon.blueprint.adapter.process.*ProcessApi*",
+            "io.miragon.blueprint.adapter.process.*",
             // Application bootstrap, outside the hexagonal layers.
             "io.miragon.blueprint.BikeLeasingApplication*",
             "io.miragon.blueprint.BikeCatalogueSeeder*",

@@ -2,7 +2,7 @@ package io.miragon.blueprint.adapter.inbound.zeebe
 
 import io.camunda.client.annotation.JobWorker
 import io.camunda.client.annotation.Variable
-import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi.ServiceTasks
+import io.miragon.blueprint.adapter.process.ServiceTasks
 import io.miragon.blueprint.application.port.inbound.BookCancellationCostsUseCase
 import io.miragon.blueprint.domain.bike.OrderId
 import org.springframework.stereotype.Component

@@ -2,8 +2,8 @@ package io.miragon.blueprint.adapter.inbound.zeebe
 
 import io.camunda.client.annotation.JobWorker
 import io.camunda.client.annotation.Variable
-import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi.Variables
-import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi.ServiceTasks
+import io.miragon.blueprint.adapter.process.CancelBikeOrderProcessApi.FlowNodes
+import io.miragon.blueprint.adapter.process.ServiceTasks
 import io.miragon.blueprint.application.port.inbound.RequestOrderCancellationUseCase
 import io.miragon.blueprint.domain.bike.OrderId
 import org.springframework.stereotype.Component
@@ -17,6 +17,6 @@ class RequestCancellationWorker(
     @JobWorker(type = ServiceTasks.MIRAVELO_REQUEST_CANCELLATION)
     fun handle(@Variable orderId: String): Map<String, Any> {
         val cancellationPossible = useCase.requestCancellation(OrderId(orderId))
-        return mapOf(Variables.ServiceTaskRequestCancellation.CANCELLATION_POSSIBLE.value to cancellationPossible)
+        return mapOf(FlowNodes.ServiceTaskRequestCancellation.Variables.CANCELLATION_POSSIBLE.value to cancellationPossible)
     }
 }
