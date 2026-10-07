@@ -7,24 +7,36 @@ This module provides reusable test configuration that can be used across multipl
 ## 📌 What's Included
 
 - **TestProcessEngineConfiguration**: Spring test configuration that ensures `ProcessEngineApi` uses the test `CamundaClient` provided by `@CamundaSpringProcessTest`
+- **ProcessPathIds**: turns a compile-checked bpmn-to-code `PathWalk` into the element-id arrays Camunda's `ProcessInstanceAssert` expects — `inOrder` keeps repeats (for `hasCompletedElementsInOrder`), `distinct` drops them (for `hasCompletedElements`)
 
 ## 🔧 How to Use
 
 Include **common-zeebe-test** as a test dependency and import the test configuration:
 
-```kotlin
-// In build.gradle.kts
-dependencies {
-    testImplementation(project(":service:common-zeebe-test"))
-}
+```xml
+<!-- In your service's pom.xml (version managed by the root pom's dependencyManagement) -->
+<dependency>
+    <groupId>io.miragon.blueprint</groupId>
+    <artifactId>common-zeebe-test</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
 
-```kotlin
+```java
 // In your test class
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @CamundaSpringProcessTest
-@Import(TestProcessEngineConfiguration::class)
+@Import(TestProcessEngineConfiguration.class)
 class YourProcessTest {
     // Your tests here
 }
+```
+
+```java
+// Assert the walked path against the generated process API
+PathWalk.Trail path = PathWalk.from(FlowNodes.StartEventLeasingRequestReceived.INSTANCE)
+    .then(n -> n.serviceTaskValidateApplication())
+    // …
+    .end(n -> n.endEventLeasingActive());
+assertThatProcessInstance(instance).hasCompletedElementsInOrder(ProcessPathIds.inOrder(path));
 ```

@@ -1,11 +1,11 @@
 # 0003 — OpenAPI as the checked-in contract
 
 - **Status:** Accepted
-- **Date:** 2026-08-18
+- **Date:** 2026-10-06
 
 ## Context
 
-The Kotlin backend exposes a REST boundary that any API consumer — another service, a test collection,
+The Java backend exposes a REST boundary that any API consumer — another service, a test collection,
 a generated client, a human with `curl` — depends on. That boundary can be described two ways: hand-write
 a spec and hope the code matches it, or derive the spec from the code. A hand-written spec drifts
 silently — the first symptom is a runtime 400 at the caller. We want the contract to be *impossible* to
@@ -20,7 +20,7 @@ The **backend is the single source of truth**, and the contract is **generated b
 2. `OpenApiSpecExportTest` — a code generator wearing a JUnit costume — fetches `/v3/api-docs`,
    re-serialises it **deterministically** (keys sorted, fixed two-space LF indenter, trailing newline,
    `servers` block dropped so the random test port can't cause churn) and writes
-   **`openapi/openapi.json`** at the repo root. It runs inside `./gradlew build`.
+   **`openapi/openapi.json`** at the repo root. It runs inside `./mvnw verify`.
 3. CI regenerates the spec and runs **`git diff --exit-code -- openapi/openapi.json`** — a **drift
    gate**. If a controller changed and the committed spec wasn't updated, the build fails.
 

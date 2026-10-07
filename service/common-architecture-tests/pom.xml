@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.miragon.blueprint</groupId>
+        <artifactId>zeebe-example</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <!--
+        Reusable architecture-test suite (ArchUnit + JavaParser), consumed by services as a single
+        test-scoped dependency on `common-architecture-tests`.
+
+        The rules live in `src/main` so they are published on the consumer's classpath; the compile-scoped
+        ArchUnit / JavaParser / JUnit dependencies therefore reach the consuming service's test classpath
+        transitively.
+    -->
+    <artifactId>common-architecture-tests</artifactId>
+    <name>common-architecture-tests</name>
+    <description>Hexagonal-architecture, naming and source-structure rules shared by every service.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
+    </dependencies>
+</project>

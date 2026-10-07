@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Root aggregator and parent of every module. Inheriting from the Spring Boot starter parent gives
+        the whole build the Boot BOM, Java 21 compiler settings (`-parameters` included, which Spring MVC
+        and the Camunda `@Variable` binding rely on) and sensible plugin defaults. Third-party versions
+        the Boot BOM does not manage are pinned once, here, as properties.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.miragon.blueprint</groupId>
+    <artifactId>zeebe-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>zeebe-example</name>
+    <description>MiraVelo bike-leasing blueprint on Camunda 8 / Zeebe — hexagonal Spring Boot backend.</description>
+
+    <modules>
+        <module>service/common-zeebe</module>
+        <module>service/common-zeebe-test</module>
+        <module>service/common-architecture-tests</module>
+        <module>service/app</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+
+        <!-- Camunda 8 / Zeebe -->
+        <camunda.version>8.9.21</camunda.version>
+
+        <!-- BPMN-to-code (typed process API generation, runtime and model validation) -->
+        <bpmn-to-code.version>6.1.1</bpmn-to-code.version>
+
+        <!-- OpenAPI — 3.x is the Spring Boot 4 line -->
+        <springdoc.version>3.1.1</springdoc.version>
+
+        <!-- Architecture tests: ArchUnit (bytecode) + JavaParser (source) -->
+        <archunit.version>1.5.1</archunit.version>
+        <javaparser.version>3.28.2</javaparser.version>
+
+        <!--
+            Override of the Boot BOM's Kotlin version: bpmn-to-code 6.1.1 is compiled against Kotlin 2.4, and the
+            BOM would otherwise downgrade its kotlin-stdlib to 2.3.x.
+        -->
+        <kotlin.version>2.4.10</kotlin.version>
+
+        <!--
+            Spring Boot run / image goals. Skipped everywhere except the executable module (service/app), so
+            `./mvnw -pl service/app -am spring-boot:run` works from the root without installing the libraries.
+        -->
+        <spring-boot.run.skip>true</spring-boot.run.skip>
+        <spring-boot.build-image.skip>true</spring-boot.build-image.skip>
+
+        <!-- Mutation testing (PIT). Skipped everywhere except the module that opts in (service/app). -->
+        <pitest.version>1.22.1</pitest.version>
+        <pitest-junit5-plugin.version>1.2.2</pitest-junit5-plugin.version>
+        <skipPitest>true</skipPitest>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>io.miragon.blueprint</groupId>
+                <artifactId>common-zeebe</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.miragon.blueprint</groupId>
+                <artifactId>common-zeebe-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.miragon.blueprint</groupId>
+                <artifactId>common-architecture-tests</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Camunda 8 / Zeebe -->
+            <dependency>
+                <groupId>io.camunda</groupId>
+                <artifactId>camunda-spring-boot-starter</artifactId>
+                <version>${camunda.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.camunda</groupId>
+                <artifactId>camunda-process-test-spring</artifactId>
+                <version>${camunda.version}</version>
+            </dependency>
+
+            <!-- BPMN-to-code -->
+            <dependency>
+                <groupId>io.miragon</groupId>
+                <artifactId>bpmn-to-code-runtime</artifactId>
+                <version>${bpmn-to-code.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.miragon</groupId>
+                <artifactId>bpmn-to-code-testing</artifactId>
+                <version>${bpmn-to-code.version}</version>
+            </dependency>
+
+            <!-- OpenAPI -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <!--
+                Guava as requested by the Zeebe client's gRPC; without the pin Maven's nearest-wins mediation picks an
+                older version from a transitive path.
+            -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>33.6.0-jre</version>
+            </dependency>
+
+            <!-- Test database for the JPA slice and process tests -->
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>2.5.252</version>
+            </dependency>
+
+            <!-- Architecture tests -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit</artifactId>
+                <version>${archunit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.javaparser</groupId>
+                <artifactId>javaparser-core</artifactId>
+                <version>${javaparser.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>io.miragon</groupId>
+                    <artifactId>bpmn-to-code-maven</artifactId>
+                    <version>${bpmn-to-code.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.pitest</groupId>
+                    <artifactId>pitest-maven</artifactId>
+                    <version>${pitest.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.pitest</groupId>
+                            <artifactId>pitest-junit5-plugin</artifactId>
+                            <version>${pitest-junit5-plugin.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!--
+                Declared on every module so `pitest:mutationCoverage` resolves across the reactor; the
+                `skipPitest` property keeps it a no-op wherever a module has not opted in.
+            -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -7,7 +7,7 @@
 > living example, and expect it to keep evolving.
 
 A ready-to-fork **starting point** for automating a business process on
-[Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot and Kotlin — one complete,
+[Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot and Java — one complete,
 runnable, production-shaped BPMN service you can clone and make your own.
 
 It targets an **external Zeebe broker**: each BPMN service task is handled by a Spring **job worker**
@@ -44,7 +44,7 @@ them — so a new project starts from something complete instead of a blank page
 
 ```
 service/
-  common-architecture-tests/   reusable ArchUnit + Konsist rule suite (src/main)
+  common-architecture-tests/   reusable ArchUnit + JavaParser rule suite (src/main)
   common-zeebe/                Zeebe glue: ProcessEngineApi, BPMN auto-deploy, connection config
   common-zeebe-test/           camunda-process-test helpers (assertions, test engine wiring)
   app/                         the Camunda 8 bike-leasing service (hexagonal)
@@ -63,18 +63,20 @@ bruno/                         REST scenarios (happy-path / abort / not-solvent 
 docs/                          ADRs (architecture decisions) + the process diagram in docs/assets/
 openapi/                       committed, drift-gated OpenAPI contract (openapi.json)
 package.json · .bpmnlintrc     BPMN linting (bpmnlint) at the repo root
+pom.xml · mvnw                 Maven reactor (parent pom with pinned versions) + Maven wrapper
 stack/                         Camunda 8 self-managed dev stack (docker compose)
 .github/                       pre-merge + nightly pipelines + Dependabot
 ```
 
-- **Stack:** Kotlin · Spring Boot 4 · **Camunda 8.9 (Zeebe, self-managed)** · PostgreSQL ·
-  Elasticsearch · Gradle with a `libs.versions.toml` version catalog.
-- **Reusable Zeebe glue:** the `:service:common-zeebe` module contributes the `CamundaClient`
+- **Stack:** Java 21 · Spring Boot 4 · **Camunda 8.9 (Zeebe, self-managed)** · PostgreSQL ·
+  Elasticsearch · Maven, with versions pinned in the root `pom.xml`'s `dependencyManagement` on top of
+  the Spring Boot BOM.
+- **Reusable Zeebe glue:** the `service/common-zeebe` module contributes the `CamundaClient`
   connection (self-managed, auth off for local dev), a small `ProcessEngineApi` (start instance /
   publish message), and classpath **auto-deployment** of every `.bpmn`, `.dmn` and `.form` on startup —
   any service that depends on it gets a working Zeebe integration for free.
-- **Generated process API:** the [`bpmn-to-code`](https://github.com/emaarco/bpmn-to-code) Gradle
-  plugin turns each `.bpmn` into a typed, node-centric `*ProcessApi` object (`FlowNodes.<Node>` with
+- **Generated process API:** the [`bpmn-to-code`](https://github.com/emaarco/bpmn-to-code) Maven
+  plugin turns each `.bpmn` into a typed, node-centric `*ProcessApi` class (`FlowNodes.<Node>` with
   its id, variables and successors) plus shared `ServiceTasks`/`Messages`/`ProcessVariables` files, so
   element ids, messages, job types, timers and variables are compile-checked constants used by both
   workers and tests.
@@ -83,7 +85,7 @@ stack/                         Camunda 8 self-managed dev stack (docker compose)
 - **BPMN linting:** [`bpmnlint`](https://github.com/bpmn-io/bpmnlint) at the **repo root**
   (`bpmnlint:recommended` + `camunda-compat/camunda-cloud-8-9` + `@miragon/rules/all`) gates the
   `.bpmn` models — enforcing Zeebe deployability and readable `flow_`/`event_`/`serviceTask_` element
-  ids. Runs on staged models via `.githooks/pre-commit` and in CI before the Gradle build.
+  ids. Runs on staged models via `.githooks/pre-commit` and in CI before the Maven build.
 - **Committed API contract:** springdoc generates the OpenAPI spec from the controllers; an export
   test writes it to `openapi/openapi.json` and CI **drift-gates** it (`git diff --exit-code`), so the
   checked-in contract can never lie about the code.
@@ -91,15 +93,17 @@ stack/                         Camunda 8 self-managed dev stack (docker compose)
   **Prometheus** registry, and **Flyway** owns the schema (`resources/db/migration`) with Hibernate
   set to `validate`.
 - **Quality gates & packaging:** **mutation testing** (pitest, gate 80 — diff-scoped on PRs, full
-  nightly) and an **OCI image** via `bootBuildImage` (no Dockerfile). See the ADRs in `docs/adr/`.
+  nightly) and an **OCI image** via `spring-boot:build-image` (no Dockerfile). See the ADRs in
+  `docs/adr/`.
 
 ## Design decisions
 
 - **Hexagonal architecture** keeps the engine and framework at the edges: the domain and use cases
   never depend on Zeebe, so business logic is testable and the engine is replaceable. The
-  `:service:common-architecture-tests` module enforces this with **ArchUnit** (bytecode: layering,
-  dependency direction, naming) and **Konsist** (source: one declaration per file, no wildcard
-  imports) — one line wires it into a service: `class ArchitectureTest : ServiceArchitectureTest(...)`.
+  `service/common-architecture-tests` module enforces this with **ArchUnit** (bytecode: layering,
+  dependency direction, naming) and **JavaParser** (source: one top-level type per file, no wildcard
+  imports) — one small class wires it into a service:
+  `class ArchitectureTest extends ServiceArchitectureTest { ArchitectureTest() { super("io.miragon.blueprint"); } }`.
 - **No business key.** Zeebe has no process business key, so the leasing **`applicationId` travels as a
   process variable** and is declared as the **message subscription correlation key** on every catch
   event. Messages are published with that id as their correlation key, and the alternative-clarification
@@ -107,20 +111,21 @@ stack/                         Camunda 8 self-managed dev stack (docker compose)
 - **Job workers, not delegates.** Each BPMN service task is a Spring `@JobWorker` in
   `adapter/inbound/zeebe`; `validateApplication` raises the `applicationInvalid` BPMN error through the
   job client so the error boundary event catches it. Workers hold no business logic — they call use cases.
-- **Unit tests** (JUnit 5 + MockK) cover every domain type, application service, adapter and worker with
-  given/when/then comments and shared `testLeasingApplication(...)` builders — controllers via
-  `@WebMvcTest`, persistence via `@DataJpaTest`.
+- **Unit tests** (JUnit 5 + Mockito) cover every domain type, application service, adapter and worker
+  with given/when/then comments and a shared `testLeasingApplication()` builder — controllers via
+  `@WebMvcTest` + `@MockitoBean`, persistence via `@DataJpaTest`.
 - **Process tests** (`camunda-process-test`) drive the deployed model on a real (in-container) Camunda 8
   engine: workers auto-register, timers are advanced with `increaseTime`, messages are published through
   the real adapter — covering happy-path, escalation, DMN rejection, withdrawal → SAGA compensation, and
-  the bike-unavailable → alternative-selection loop.
+  the bike-unavailable → alternative-selection loop. The walked path is asserted as a compile-checked
+  bpmn-to-code `PathWalk`.
 - **Model validation** (`bpmn-to-code-testing`) checks the `.bpmn` models structurally at build time for
   engine `ZEEBE` (`BpmnRules.all()`).
 - **Bruno + CI** proves the REST-drivable scenarios against the *running* app: domain REST endpoints
   drive the business actions and the Camunda 8 REST API completes the form-only user task. **Timer note:**
   a running Zeebe broker cannot fast-forward timers over REST, so the timer-gated finals (the 14-day
   withdrawal / signature deadline) are covered by the process tests rather than Bruno.
-- **Dependabot** keeps Gradle, the compose images and GitHub Actions current.
+- **Dependabot** keeps the Maven dependencies, the compose images and GitHub Actions current.
 
 ## Run it
 
@@ -129,14 +134,14 @@ stack/                         Camunda 8 self-managed dev stack (docker compose)
 docker compose -f stack/docker-compose.yml up -d
 
 # 2. run the app (REST API on http://localhost:8081)
-./gradlew :service:app:bootRun
+./mvnw -pl service/app -am spring-boot:run
 
 # 3. lint the BPMN models (tooling lives at the repo root)
 npm ci && npm run lint:bpmn
 
 # 4. build + run all tests (arch + unit + worker + model + process tests; needs Docker for the
 #    in-container process-test engine)
-./gradlew build
+./mvnw verify
 
 # 5. drive the REST scenarios against the running app
 cd bruno && npx @usebruno/cli@4.0.0 run . --env local -r
@@ -180,7 +185,7 @@ retry in **Operate**. A ready-to-run Bruno collection lives in `bruno/06-inciden
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the container workflow
 and the pre-PR checklist, and [`AGENTS.md`](AGENTS.md) for the machine-enforced architecture rules. In
-short: open an issue to discuss substantial changes first, keep the gates green (`./gradlew build`,
+short: open an issue to discuss substantial changes first, keep the gates green (`./mvnw verify`,
 `git diff --exit-code openapi/openapi.json`), and use
 [Conventional Commits](https://www.conventionalcommits.org) for commit messages and PR titles. The
 *why* behind the repo's shape is recorded as ADRs in [`docs/adr/`](docs/adr/).

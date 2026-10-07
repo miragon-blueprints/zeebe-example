@@ -9,35 +9,33 @@ and interact with the Zeebe engine running in your stack.
 
 ## 🔧 Key Features
 
-- **Zeebe Client Integration**: Pre-configured Zeebe client for quick and hassle-free connection to your process engine.
-- **Worker Base Classes**: Simplifies the creation and management of job workers with reusable base classes.
-- **Auto-configurations**: Automatically register your job workers and manage connections to the Zeebe engine.
-- **Service Interaction**: Provides utilities and classes to interact with BPMN workflows from your services.
+- **Zeebe Client Connection**: `zeebe-application.yaml` contributes the self-managed connection defaults
+  (gRPC `localhost:26500`, REST `localhost:8080`, no auth) through `ZeebeEnvironmentConfiguration`.
+- **Auto-deployment**: `EngineAutoConfiguration` (registered via `META-INF/spring/…AutoConfiguration.imports`)
+  deploys every `bpmn/*.bpmn`, `dmn/*.dmn` and `forms/*.form` on the classpath at start-up.
+- **ProcessEngineApi**: a small facade over the `CamundaClient` to start processes, publish messages and
+  search process instances, speaking bpmn-to-code's typed `ProcessId` / `MessageName` / `VariableName`.
 
 ## 🔍 Further Details
 
-You might notice we're not using Zeebe's native **`@JobWorker`** Spring annotation. Here's why:
-
-This example-service uses **[`camunda-process-test-spring`](https://github.com/camunda/camunda/tree/main/testing/camunda-process-test-spring)**
-for process testing with Camunda 8.8. This approach allows us to test processes with actual worker implementations
-instead of mocking them, which is why we manage worker registration manually with our own worker classes.
-
-### Testing Approach
-
-- Tests use the `@CamundaProcessTest` annotation which provides an in-memory process engine
-- Workers are registered manually in tests using the injected `CamundaClient`
-- This allows testing with real worker logic without needing to mock the worker behavior
-- The `CamundaProcessTestContext` provides utilities for timer manipulation and process control
+Job workers are plain Spring beans using Camunda's native **`@JobWorker`** annotation (see
+`service/app/src/main/java/io/miragon/blueprint/adapter/inbound/zeebe`). Process tests run them for real
+against an in-container engine with **`@CamundaSpringProcessTest`** from
+[`camunda-process-test-spring`](https://github.com/camunda/camunda/tree/main/testing/camunda-process-test-spring);
+the workers register automatically and the use cases behind them are mocked. `common-zeebe-test`
+supplies the matching test configuration.
 
 ## 📌 How to Use
 
 Include **common-zeebe** as a dependency in your service modules
 to integrate and interact with the Zeebe engine efficiently.
 
-### Example (Gradle Setup):
+### Example (Maven Setup):
 
-```gradle
-dependencies {
-    implementation(project(":common-zeebe"))
-}
+```xml
+<!-- version managed by the root pom's dependencyManagement -->
+<dependency>
+    <groupId>io.miragon.blueprint</groupId>
+    <artifactId>common-zeebe</artifactId>
+</dependency>
 ```

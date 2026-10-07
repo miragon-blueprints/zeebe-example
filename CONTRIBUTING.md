@@ -12,13 +12,13 @@ npm ci && npm run hooks:install                                # BPMN lint + git
 ```
 
 You need **JDK 21**, **Node ≥ 22**, and **Docker (or Podman)** for the local Camunda 8 stack and
-Postgres.
+Postgres. Maven comes with the repo (`./mvnw`), so no local install is needed.
 
 Run the whole stack locally:
 
 ```bash
 docker compose -f stack/docker-compose.yml up -d   # Camunda 8 (Zeebe + Operate/Tasklist) + Postgres
-./gradlew :service:app:bootRun                      # backend on :8081, connects to Zeebe on :26500
+./mvnw -pl service/app -am spring-boot:run          # backend on :8081, connects to Zeebe on :26500
 ```
 
 ### Ports
@@ -30,7 +30,7 @@ docker compose -f stack/docker-compose.yml up -d   # Camunda 8 (Zeebe + Operate/
 | Zeebe gRPC · REST | 26500 · 8080/v2 |
 | Camunda 8 web apps (Operate / Tasklist) | 8080 |
 | OpenAPI spec · Swagger UI | 8081/v3/api-docs · 8081/swagger-ui.html |
-| Actuator (health · liveness/readiness · prometheus) | 8081/actuator |
+| Actuator (health/liveness/readiness · prometheus) | 8081/actuator |
 
 The backend serves its `/api` surface on a single origin, so no CORS code runs on the production path
 (a dev-only escape hatch exists under the `dev` profile). Under Conductor the ports are fixed and the
@@ -57,7 +57,7 @@ local stack. The rationale is in [ADR-0011](docs/adr/0011-build-and-deployment-a
 
 ```bash
 # 1. build the backend OCI image (Spring buildpacks — no Dockerfile). Produces miravelo/zeebe-example:1.0-SNAPSHOT
-./gradlew :service:app:bootBuildImage
+./mvnw -pl service/app -am spring-boot:build-image -DskipTests
 
 # 2. run it against the local Camunda 8 + Postgres stack
 docker compose -f stack/docker-compose.yml up -d
@@ -67,12 +67,13 @@ docker run --rm --network host \
   miravelo/zeebe-example:1.0-SNAPSHOT
 ```
 
-**Podman:** `bootBuildImage` needs a Docker-API socket. Expose podman's and point the build at it:
+**Podman:** `spring-boot:build-image` needs a Docker-API socket. Expose podman's and point the build
+at it:
 
 ```bash
 podman system service --time=0 unix:///tmp/podman.sock &
 export DOCKER_HOST=unix:///tmp/podman.sock
-./gradlew :service:app:bootBuildImage
+./mvnw -pl service/app -am spring-boot:build-image -DskipTests
 ```
 
 **Configuration.** `application.yaml` ships dev defaults; the deploy-relevant values are read from the
@@ -91,11 +92,16 @@ environment (they win over the baked defaults):
 ## Scripts
 
 ```bash
-./gradlew build                         # arch + unit + process + model validation + spec export
-./gradlew :service:app:pitest           # mutation score >= 80
-./gradlew generateBpmnModels            # regenerate the typed process API after editing a .bpmn
-npm run lint:bpmn                       # bpmnlint the .bpmn models
+./mvnw verify                                                    # arch + unit + process + model validation + spec export
+./mvnw -pl service/app -am test-compile pitest:mutationCoverage  # mutation score >= 80
+./mvnw -pl service/app generate-sources                          # regenerate the typed process API after editing a .bpmn
+./mvnw -pl service/app -am test -Dtest='*<Name>Test' -Dsurefire.failIfNoSpecifiedTests=false  # one test class
+npm run lint:bpmn                                                # bpmnlint the .bpmn models
 ```
+
+To run PIT the way the PR gate does, scope it to the classes you touched with
+`-DtargetClasses='io.miragon.blueprint.x.Foo*,io.miragon.blueprint.y.Bar*'`; the HTML report lands in
+`service/app/target/pit-reports/`.
 
 ## Ground rules
 
@@ -107,7 +113,7 @@ npm run lint:bpmn                       # bpmnlint the .bpmn models
 - **Conventional Commits.** Commit messages and PR titles follow
   [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
   `refactor:`, `test:`, `chore:`). Write everything in **English**.
-- **Keep the gates green.** The architecture (ArchUnit + Konsist), contract-drift and mutation (≥ 80)
+- **Keep the gates green.** The architecture (ArchUnit + JavaParser), contract-drift and mutation (≥ 80)
   gates run in CI on every PR. They are fitness functions, not style guides — a violation fails the
   build. The mutation gate is **diff-scoped** on PRs (only the classes you changed); the full-module
   gate-80 sweep runs nightly.
@@ -115,8 +121,9 @@ npm run lint:bpmn                       # bpmnlint the .bpmn models
   Mutation testing means a test that runs without asserting will fail CI.
 - **Changing the API?** springdoc regenerates the committed `openapi/openapi.json`; run the export
   test and `git diff --exit-code openapi/openapi.json` so the checked-in contract stays in sync.
-- **Changing the process?** Edit the `.bpmn`, re-run `./gradlew generateBpmnModels`, and keep
-  `npm run lint:bpmn` green.
+- **Changing the process?** Edit the `.bpmn`, re-run `./mvnw -pl service/app generate-sources` (every
+  build does it too), commit the regenerated `adapter/process` sources, and keep `npm run lint:bpmn`
+  green.
 - **Changing the database schema?** Flyway owns it. Add a new forward-only migration
   `V{n}__description.sql` under `service/app/src/main/resources/db/migration/` in the same change as
   the entity edit — never edit an already-applied migration. Hibernate runs `validate`, so a mismatch
@@ -125,9 +132,9 @@ npm run lint:bpmn                       # bpmnlint the .bpmn models
 ## Before opening a PR
 
 ```bash
-./gradlew build
-git diff --exit-code openapi/openapi.json    # the API contract must not drift
-./gradlew :service:app:pitest                # mutation score >= 80
+./mvnw verify
+git diff --exit-code openapi/openapi.json                         # the API contract must not drift
+./mvnw -pl service/app -am test-compile pitest:mutationCoverage   # mutation score >= 80
 ```
 
 All of these run in CI on every pull request (JDK 21 / Node ≥ 22).

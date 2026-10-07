@@ -1,12 +1,12 @@
 .claude/logs/
-.gradle
+target/
+# Leftovers of the former Gradle build in existing clones
+.gradle/
 **/build/
-service/app/target/
+.kotlin/
 **/bin/
-!gradle/wrapper/gradle-wrapper.jar
 .idea
 *.iml
-.kotlin/
 .DS_Store
 .vscode
 .context

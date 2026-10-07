@@ -1,15 +1,17 @@
 # 0008 — Deliberately track the latest major versions
 
 - **Status:** Accepted
-- **Date:** 2026-08-20
+- **Date:** 2026-10-06
 
 ## Context
 
-The stack sits on the newest major of nearly everything at once — Spring Boot 4, Kotlin 2.x, Gradle,
-and Camunda 8 / Zeebe on the newest self-managed line. That is a real choice with a real cost: newest
-majors have smaller ecosystems, more breaking-change churn, and occasionally force an integration
-workaround (e.g. aligning the Camunda 8 Spring client with the Spring Boot 4 line so the app starts). A
-fork left untouched for months may need an upgrade pass before it builds again.
+The stack sits on the newest major of nearly everything at once — Spring Boot 4, Maven 3.10 and
+Camunda 8 / Zeebe on the newest self-managed line. The one deliberate exception is the JVM: the code
+targets **Java 21**, the LTS baseline the backend has always compiled for; moving to a newer LTS is an
+ordinary bump under this ADR (see [ADR-0013](0013-java-and-maven.md)). That is a real choice with a real cost: newest majors have smaller
+ecosystems, more breaking-change churn, and occasionally force an integration workaround (e.g. aligning
+the Camunda 8 Spring client with the Spring Boot 4 line so the app starts). A fork left untouched for
+months may need an upgrade pass before it builds again.
 
 Left unwritten, this is indistinguishable from *drift* — a reader can't tell whether being on the bleeding
 edge is a stance or an accident. This ADR makes it a stance.
