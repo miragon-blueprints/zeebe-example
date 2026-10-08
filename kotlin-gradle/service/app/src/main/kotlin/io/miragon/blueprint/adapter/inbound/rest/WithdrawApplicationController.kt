@@ -15,7 +15,7 @@ class WithdrawApplicationController(
 ) {
 
     @PostMapping("/{applicationId}/withdraw")
-    fun withdraw(@PathVariable applicationId: String): ResponseEntity<Unit> {
+    fun withdraw(@PathVariable applicationId: String): ResponseEntity<Void> {
         useCase.withdraw(ApplicationId.of(applicationId))
         return ResponseEntity.accepted().build()
     }

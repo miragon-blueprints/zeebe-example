@@ -15,7 +15,7 @@ class SignContractController(
 ) {
 
     @PostMapping("/{applicationId}/sign-contract")
-    fun signContract(@PathVariable applicationId: String): ResponseEntity<Unit> {
+    fun signContract(@PathVariable applicationId: String): ResponseEntity<Void> {
         useCase.signContract(ApplicationId.of(applicationId))
         return ResponseEntity.accepted().build()
     }

@@ -2,8 +2,6 @@ package io.miragon.blueprint.adapter.inbound.rest;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.Content;
-import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,20 +26,5 @@ public class OpenApiConfiguration {
                     .description(
                         "Customer-portal and back-office endpoints for the MiraVelo bike-leasing "
                             + "process, backed by Camunda 8 / Zeebe."));
-    }
-
-    /**
-     * Documents the bodiless endpoints ({@code ResponseEntity<Void>}) with an explicit, empty {@code content}
-     * object instead of none — the shape the committed {@code openapi/openapi.json} has always published, so
-     * the drift-gated contract stays unchanged.
-     */
-    @Bean
-    public OperationCustomizer emptyContentForBodilessResponses() {
-        return (operation, handlerMethod) -> {
-            operation.getResponses().values().stream()
-                .filter(response -> response.getContent() == null)
-                .forEach(response -> response.setContent(new Content()));
-            return operation;
-        };
     }
 }
