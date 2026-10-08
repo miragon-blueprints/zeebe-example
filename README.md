@@ -1,190 +1,95 @@
 # Camunda 8 Bike-Leasing Blueprint
 
 > [!NOTE]
-> **🚧 Work in progress.** This is a **solution template** — a reference to fork and build on, for
-> our consultants and anyone else — not a product that ships. It's still being fleshed out, so parts
-> may be incomplete and it may not yet fully demonstrate what it's meant to. Treat it as a
-> living example, and expect it to keep evolving.
+> **🚧 Work in progress.** A **solution template** to fork and build on — not a product that ships.
+> Expect it to keep evolving.
 
 A ready-to-fork **starting point** for automating a business process on
-[Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot and Kotlin — one complete,
-runnable, production-shaped BPMN service you can clone and make your own.
+[Camunda 8](https://camunda.com) (Zeebe, self-managed) with Spring Boot — one complete, runnable,
+production-shaped BPMN service. It targets an **external Zeebe broker**: each BPMN service task is
+handled by a Spring **job worker** rather than an in-process engine.
 
-It targets an **external Zeebe broker**: each BPMN service task is handled by a Spring **job worker**
-rather than an in-process engine, wrapped in clean hexagonal engineering scaffolding.
+<!-- variant:blueprint -->
+## 🧭 Pick your stack
 
-## The scenario
+| | [`kotlin-gradle/`](kotlin-gradle/README.md) | [`java-maven/`](java-maven/README.md) |
+|---|---|---|
+| **Stack** | Kotlin 2.4 · Gradle | Java 21 · Maven |
+| **Choose it when** | you are free to choose — **our recommendation for a modern stack** | Java + Maven is your team's or company's standard, or you are in a training |
 
-Meet **MiraVelo** — a (fictional) lifestyle bike brand for the quarter-life-crisis crowd: gravel bikes
-for the weekends that count, road bikes for everyone who just wants to feel the asphalt. MiraVelo sells
-its bikes on a **leasing model** for private and corporate customers, and this project automates that
-leasing application from the first request to an active lease.
+Both run the same process, expose the same REST contract and pass the same end-to-end scenarios. Each
+directory is self-contained — build, code, process models and schema — and CI keeps the models and
+configuration of the two identical, so only the language and the build tool differ. Building on one?
+[Turn the repo into a single-stack starter](docs/starter.md) with one command.
+<!-- /variant:blueprint -->
 
-It's a made-up company, so nobody gets hurt when the DMN politely declines a 15-year-old's application
-for a carbon road bike.
+## 🚲 The scenario
 
-## What's inside
-
-Most engine examples stop at a happy-path service task. This one deliberately walks through the **broad
-palette of BPMN elements you actually meet in real processes** — and the engineering scaffolding around
-them — so a new project starts from something complete instead of a blank page:
+**MiraVelo** is a (fictional) bike brand that sells on a **leasing model**. This service automates a
+leasing application from the first request to an active lease — and deliberately walks through the
+**broad palette of BPMN elements you meet in real processes**, not just a happy-path service task:
 
 ![The bike-leasing process](docs/assets/bike-leasing.png)
 
-- a **message start event**, **service tasks** (job workers) and a **DMN business-rule task**;
-- an **embedded sub-process** with an **event-based gateway** (sign vs. a 14-day deadline) and a
-  non-interrupting **7-day reminder timer**;
-- a **parallel fork/join**, and a **user task with a Camunda Form** — completable in the Tasklist *or*
-  via a REST endpoint;
-- **compensation / SAGA** handlers guarded by **error** and **escalation** boundary events;
-- a **call activity** into a second process, a **message event sub-process** (application withdrawal),
-  and a **terminate end event**.
+- **message start event**, **service tasks** (job workers) and a **DMN business-rule task**
+- **embedded sub-process** with an **event-based gateway** and a non-interrupting **reminder timer**
+- **parallel fork/join**, and a **user task with a Camunda Form** — completable in the Tasklist or via REST
+- **compensation / SAGA** handlers guarded by **error** and **escalation** boundary events
+- **call activity**, **message event sub-process** (withdrawal) and a **terminate end event**
 
-## How it's built
+## 🚀 Run it
 
-```
-service/
-  common-architecture-tests/   reusable ArchUnit + Konsist rule suite (src/main)
-  common-zeebe/                Zeebe glue: ProcessEngineApi, BPMN auto-deploy, connection config
-  common-zeebe-test/           camunda-process-test helpers (assertions, test engine wiring)
-  app/                         the Camunda 8 bike-leasing service (hexagonal)
-    adapter/inbound/rest        domain REST controllers + web config (OpenAPI, CORS, error handling)
-    adapter/inbound/zeebe       @JobWorker handlers for the BPMN service tasks
-    adapter/outbound/zeebe      drives the engine (ProcessEngineApi / CamundaClient / task inbox)
-    adapter/outbound/db         JPA persistence (leasing applications + bike portfolio)
-    adapter/outbound/dealer     simulated bike dealer (stock check + order)
-    adapter/process             generated *ProcessApi + shared constants (bpmn-to-code)
-    application/{port,service}  use-case ports and their services
-    domain/{leasing,bike}       pure domain model
-    resources/{bpmn,dmn,forms}  the process models and Camunda Forms
-    resources/db/migration      Flyway schema migrations (Hibernate only validates)
-bruno/                         REST scenarios (happy-path / abort / not-solvent / bike-unavailable /
-                               incident-demo / list-and-inbox)
-docs/                          ADRs (architecture decisions) + the process diagram in docs/assets/
-openapi/                       committed, drift-gated OpenAPI contract (openapi.json)
-package.json · .bpmnlintrc     BPMN linting (bpmnlint) at the repo root
-stack/                         Camunda 8 self-managed dev stack (docker compose)
-.github/                       pre-merge + nightly pipelines + Dependabot
-```
+You need **JDK 21** and **Docker** (or Podman).
 
-- **Stack:** Kotlin · Spring Boot 4 · **Camunda 8.9 (Zeebe, self-managed)** · PostgreSQL ·
-  Elasticsearch · Gradle with a `libs.versions.toml` version catalog.
-- **Reusable Zeebe glue:** the `:service:common-zeebe` module contributes the `CamundaClient`
-  connection (self-managed, auth off for local dev), a small `ProcessEngineApi` (start instance /
-  publish message), and classpath **auto-deployment** of every `.bpmn`, `.dmn` and `.form` on startup —
-  any service that depends on it gets a working Zeebe integration for free.
-- **Generated process API:** the [`bpmn-to-code`](https://github.com/emaarco/bpmn-to-code) Gradle
-  plugin turns each `.bpmn` into a typed, node-centric `*ProcessApi` object (`FlowNodes.<Node>` with
-  its id, variables and successors) plus shared `ServiceTasks`/`Messages`/`ProcessVariables` files, so
-  element ids, messages, job types, timers and variables are compile-checked constants used by both
-  workers and tests.
-- **Forms:** Camunda 8 Forms (`.form`) are deployed with the process and render in the Tasklist for the
-  user tasks.
-- **BPMN linting:** [`bpmnlint`](https://github.com/bpmn-io/bpmnlint) at the **repo root**
-  (`bpmnlint:recommended` + `camunda-compat/camunda-cloud-8-9` + `@miragon/rules/all`) gates the
-  `.bpmn` models — enforcing Zeebe deployability and readable `flow_`/`event_`/`serviceTask_` element
-  ids. Runs on staged models via `.githooks/pre-commit` and in CI before the Gradle build.
-- **Committed API contract:** springdoc generates the OpenAPI spec from the controllers; an export
-  test writes it to `openapi/openapi.json` and CI **drift-gates** it (`git diff --exit-code`), so the
-  checked-in contract can never lie about the code.
-- **Ops surface & schema:** Spring Boot **actuator** probes (health / liveness / readiness) + a
-  **Prometheus** registry, and **Flyway** owns the schema (`resources/db/migration`) with Hibernate
-  set to `validate`.
-- **Quality gates & packaging:** **mutation testing** (pitest, gate 80 — diff-scoped on PRs, full
-  nightly) and an **OCI image** via `bootBuildImage` (no Dockerfile). See the ADRs in `docs/adr/`.
-
-## Design decisions
-
-- **Hexagonal architecture** keeps the engine and framework at the edges: the domain and use cases
-  never depend on Zeebe, so business logic is testable and the engine is replaceable. The
-  `:service:common-architecture-tests` module enforces this with **ArchUnit** (bytecode: layering,
-  dependency direction, naming) and **Konsist** (source: one declaration per file, no wildcard
-  imports) — one line wires it into a service: `class ArchitectureTest : ServiceArchitectureTest(...)`.
-- **No business key.** Zeebe has no process business key, so the leasing **`applicationId` travels as a
-  process variable** and is declared as the **message subscription correlation key** on every catch
-  event. Messages are published with that id as their correlation key, and the alternative-clarification
-  user task is completed by an element-id + `applicationId` lookup (see `LeasingProcessAdapter`).
-- **Job workers, not delegates.** Each BPMN service task is a Spring `@JobWorker` in
-  `adapter/inbound/zeebe`; `validateApplication` raises the `applicationInvalid` BPMN error through the
-  job client so the error boundary event catches it. Workers hold no business logic — they call use cases.
-- **Unit tests** (JUnit 5 + MockK) cover every domain type, application service, adapter and worker with
-  given/when/then comments and shared `testLeasingApplication(...)` builders — controllers via
-  `@WebMvcTest`, persistence via `@DataJpaTest`.
-- **Process tests** (`camunda-process-test`) drive the deployed model on a real (in-container) Camunda 8
-  engine: workers auto-register, timers are advanced with `increaseTime`, messages are published through
-  the real adapter — covering happy-path, escalation, DMN rejection, withdrawal → SAGA compensation, and
-  the bike-unavailable → alternative-selection loop.
-- **Model validation** (`bpmn-to-code-testing`) checks the `.bpmn` models structurally at build time for
-  engine `ZEEBE` (`BpmnRules.all()`).
-- **Bruno + CI** proves the REST-drivable scenarios against the *running* app: domain REST endpoints
-  drive the business actions and the Camunda 8 REST API completes the form-only user task. **Timer note:**
-  a running Zeebe broker cannot fast-forward timers over REST, so the timer-gated finals (the 14-day
-  withdrawal / signature deadline) are covered by the process tests rather than Bruno.
-- **Dependabot** keeps Gradle, the compose images and GitHub Actions current.
-
-## Run it
+**1. Start the Camunda 8 stack** (Zeebe, Operate, Tasklist, Elasticsearch) and Postgres
 
 ```bash
-# 1. start the Camunda 8 stack (Zeebe + Operate/Tasklist + Postgres + Elasticsearch)
 docker compose -f stack/docker-compose.yml up -d
-
-# 2. run the app (REST API on http://localhost:8081)
-./gradlew :service:app:bootRun
-
-# 3. lint the BPMN models (tooling lives at the repo root)
-npm ci && npm run lint:bpmn
-
-# 4. build + run all tests (arch + unit + worker + model + process tests; needs Docker for the
-#    in-container process-test engine)
-./gradlew build
-
-# 5. drive the REST scenarios against the running app
-cd bruno && npx @usebruno/cli@4.0.0 run . --env local -r
 ```
 
-Operate and Tasklist are at `http://localhost:8080` (`demo` / `demo`). The Spring app runs on **8081**
-because the Camunda web apps hold 8080.
+**2. Start the service** on :8081
 
-Start a case with `POST http://localhost:8081/api/bike-leasing`
-(`{ "customerName": …, "email": …, "age": 35, "monthlyNetIncome": 3500, "bikeId": "BIKE-900", "bikeModel": "Gravel Explorer 900" }`).
+<!-- variant:kotlin-gradle -->
+```bash
+cd kotlin-gradle && ./gradlew :service:app:bootRun
+```
+<!-- /variant:kotlin-gradle -->
+<!-- variant:blueprint -->
+or
+<!-- /variant:blueprint -->
+<!-- variant:java-maven -->
+```bash
+cd java-maven && ./mvnw -pl service/app -am spring-boot:run
+```
+<!-- /variant:java-maven -->
 
-The `age` and `monthlyNetIncome` feed the `checkCreditRating` DMN; the `bikeId` identifies the bike and
-is the *only* bike attribute the engine ever carries. The descriptive `bikeModel` lives in a separate
-**bike portfolio** aggregate (its own `bike_portfolio` table, keyed by `bikeId`) — never as a process
-variable — and `GET /api/bike-leasing/{id}` resolves it back from there.
+**3. Use it** — open Operate / Tasklist at <http://localhost:8080> (demo/demo) or the Swagger UI at
+<http://localhost:8081/swagger-ui.html>, or drive the whole process over REST:
 
-Beyond the per-case actions, the API also exposes a few read models: `GET /api/bikes` (the seeded
-catalogue with live dealer availability, backing a picker), `GET /api/bike-leasing?status=&page=&size=`
-(the paged application list) and `GET /api/tasks/clarify-alternative` (the back-office inbox of cases
-waiting on the alternative-clarification task — correlated by business key, never exposing a raw task
-id). The full contract is the committed [`openapi/openapi.json`](openapi/openapi.json), also served live
-at `http://localhost:8081/swagger-ui.html`.
+```bash
+cd bruno && npx --yes @usebruno/cli@4.0.0 run . --env local -r
+```
 
-If the requested bike is out of stock (`bikeId: "BIKE-OOS"`), the `Clarify alternative with customer`
-user task can be resolved **two ways**, a deliberate contrast:
+## 📂 What's where
 
-- the **recommended** path — a client calls `POST …/api/bike-leasing/{id}/clarify-alternative`, which
-  routes through the domain (persisting the chosen alternative) *before* completing the task; versus
-- the **form-only** path on `clarify-return` in `cancel-bike-order.bpmn`, kept as a counter-example:
-  completing it via the Camunda Form or the Camunda 8 REST API never touches the domain, so its data
-  lands only in process variables (see the `bpmn:documentation` on each task).
+<!-- variant:kotlin-gradle variant:nested -->
+- [`kotlin-gradle/`](kotlin-gradle/README.md) — the service in Kotlin + Gradle, its build and quality gates
+  <!-- /variant:kotlin-gradle -->
+  <!-- variant:java-maven variant:nested -->
+- [`java-maven/`](java-maven/README.md) — the service in Java 21 + Maven, its build and quality gates
+  <!-- /variant:java-maven -->
+- [`openapi/`](openapi/openapi.json) — the checked-in, drift-gated OpenAPI contract
+- [`bruno/`](bruno/README.md) — the REST scenarios, the two ways to complete a user task, the incident demo
+- [`stack/`](stack/docker-compose.yml) — the Camunda 8 self-managed dev stack and Postgres
+- [`docs/`](docs/README.md) — the Architecture Decision Records: why the repo is shaped this way
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, ports, containers and the PR workflow
 
-## Incident demo
+## 🤝 Contributing
 
-Want to teach **transaction boundaries, retries and incidents**? Submit a request for the poison bike
-`BIKE-FAIL`: the simulated dealer "outage" fails the *Order bike from dealer* job, its retries count
-down (`retries="3"`, 10s apart), and once they hit 0 Zeebe raises an **incident** you can analyze and
-retry in **Operate**. A ready-to-run Bruno collection lives in `bruno/06-incident-demo/`.
+Contributions are welcome. Open an issue before a substantial change, keep the CI gates green and use
+[Conventional Commits](https://www.conventionalcommits.org). The details are in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Contributing
-
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the container workflow
-and the pre-PR checklist, and [`AGENTS.md`](AGENTS.md) for the machine-enforced architecture rules. In
-short: open an issue to discuss substantial changes first, keep the gates green (`./gradlew build`,
-`git diff --exit-code openapi/openapi.json`), and use
-[Conventional Commits](https://www.conventionalcommits.org) for commit messages and PR titles. The
-*why* behind the repo's shape is recorded as ADRs in [`docs/adr/`](docs/adr/).
-
-## License
+## 📄 License
 
 Licensed under the [MIT License](./LICENSE).
