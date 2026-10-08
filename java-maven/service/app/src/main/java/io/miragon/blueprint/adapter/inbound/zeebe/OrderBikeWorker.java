@@ -5,11 +5,13 @@ import io.camunda.client.annotation.Variable;
 import io.camunda.client.api.response.ActivatedJob;
 import io.camunda.client.api.worker.JobClient;
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes;
+import io.miragon.blueprint.adapter.process.Errors;
 import io.miragon.blueprint.adapter.process.ServiceTasks;
 import io.miragon.blueprint.application.port.inbound.OrderBikeUseCase;
+import io.miragon.blueprint.domain.bike.BikeUnavailableException;
+import io.miragon.blueprint.domain.bike.OrderId;
 import io.miragon.blueprint.domain.leasing.ApplicationId;
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +22,9 @@ import org.springframework.stereotype.Component;
  * {@code R3/PT10S} retry cycle — the countdown is visible in Operate and, once the retries hit 0, Zeebe
  * automatically raises an incident on {@code serviceTask_orderBike}. It powers the reproducible incident
  * demo (bike id {@code BIKE-FAIL}, see the {@code 06-incident-demo} Bruno collection); the poison-id logic itself
- * lives in the simulated dealer, which throws. {@code autoComplete} is off so we own the complete/fail
- * decision explicitly.
+ * lives in the simulated dealer, which throws. An out-of-stock bike is no failure: it is signalled to
+ * the process as the BPMN error {@code bikeUnavailable}, which the error boundary event on the service task
+ * catches. {@code autoComplete} is off so we own the complete/throw/fail decision explicitly.
  */
 @Component
 public class OrderBikeWorker {
@@ -37,14 +40,16 @@ public class OrderBikeWorker {
     @JobWorker(type = ServiceTasks.MIRAVELO_ORDER_BIKE, autoComplete = false)
     public void handle(JobClient client, ActivatedJob job, @Variable String applicationId) {
         try {
-            OrderBikeUseCase.Result result = useCase.orderBike(ApplicationId.of(applicationId));
-            Map<String, Object> variables = new LinkedHashMap<>();
-            variables.put(
-                FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.getValue(),
-                result.orderId() != null ? result.orderId().value() : null);
-            variables.put(FlowNodes.ServiceTaskOrderBike.Variables.BIKE_AVAILABLE.getValue(), result.bikeAvailable());
+            OrderId orderId = useCase.orderBike(ApplicationId.of(applicationId));
             client.newCompleteCommand(job)
-                .variables(variables)
+                .variables(Map.of(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.getValue(), orderId.value()))
+                .send()
+                .join();
+        } catch (BikeUnavailableException e) {
+            // Leaving the task through the error boundary event registers no order compensation.
+            client.newThrowErrorCommand(job)
+                .errorCode(Errors.BIKE_UNAVAILABLE.getCode())
+                .errorMessage(e.getMessage())
                 .send()
                 .join();
         } catch (RuntimeException e) {

@@ -35,8 +35,6 @@ object ServiceTasks {
 
   const val MIRAVELO_SEND_REMINDER_MAIL: String = "miravelo.sendReminderMail"
 
-  const val MIRAVELO_VALIDATE_APPLICATION: String = "miravelo.validateApplication"
-
   val all: List<String> = listOf(
     MIRAVELO_ACTIVATE_LEASING,
     MIRAVELO_BOOK_COSTS,
@@ -49,6 +47,5 @@ object ServiceTasks {
     MIRAVELO_SEND_CONTRACT,
     MIRAVELO_SEND_REJECTION,
     MIRAVELO_SEND_REMINDER_MAIL,
-    MIRAVELO_VALIDATE_APPLICATION,
   )
 }

@@ -1,0 +1,33 @@
+meta {
+  name: The process ended with the contract cancelled
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{camundaRest}}/element-instances/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processInstanceKey": "{{processInstanceKey}}",
+      "elementId": "endEvent_contractCancelled",
+      "state": "COMPLETED"
+    }
+  }
+}
+
+script:pre-request {
+  const key = bru.getVar("processInstanceKey");
+  await pollSearch("/element-instances/search",
+    { filter: { processInstanceKey: key, elementId: "endEvent_contractCancelled", state: "COMPLETED" } },
+    (b) => b && Array.isArray(b.items) && b.items.length >= 1);
+}
+
+assert {
+  res.status: eq 200
+  res.body.items: length 1
+}

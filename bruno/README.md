@@ -17,6 +17,8 @@ npx --yes @usebruno/cli@4.0.0 run . --env local -r
 | `05-bike-unavailable` | the bike is out of stock and the customer picks an alternative |
 | `06-incident-demo` | a failing job runs out of retries and raises an incident |
 | `07-list-and-inbox` | the list and task-inbox endpoints |
+| `08-alternative-declined` | the bike is out of stock and no alternative is found; contract and policy are compensated, no order is cancelled |
+| `09-invalid-request` | a request without income is refused with a 400 before any process starts |
 
 A running Zeebe broker cannot fast-forward timers over REST, so the timer-gated steps — the signature
 deadline and the 14-day withdrawal period that ends in an active lease — are covered by the process

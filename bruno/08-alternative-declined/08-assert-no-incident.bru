@@ -1,0 +1,24 @@
+meta {
+  name: No incident was raised
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{camundaRest}}/incidents/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processInstanceKey": "{{processInstanceKey}}"
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.items: length 0
+}

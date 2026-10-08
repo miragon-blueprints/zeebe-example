@@ -1,0 +1,25 @@
+meta {
+  name: No order cancellation was attempted
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{camundaRest}}/element-instances/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processInstanceKey": "{{processInstanceKey}}",
+      "elementId": "callActivity_cancelBikeOrder"
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.items: length 0
+}

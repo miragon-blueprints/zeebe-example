@@ -1,0 +1,21 @@
+meta {
+  name: The application was cancelled
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/bike-leasing/{{applicationId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  const id = bru.getVar("applicationId");
+  await pollApp(`/api/bike-leasing/${id}`, (b, s) => s === 200 && b && b.status === "CANCELLED");
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq CANCELLED
+}

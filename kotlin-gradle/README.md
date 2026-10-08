@@ -61,8 +61,9 @@ The resources are kept identical to the other variant's; CI fails when they diff
   off for local dev), a small `ProcessEngineApi` (start instance / publish message) and classpath
   auto-deployment of every `.bpmn`, `.dmn` and `.form` on startup.
 - **Job workers, not delegates.** Each BPMN service task is a Spring `@JobWorker` in
-  `adapter/inbound/zeebe`. Workers hold no business logic — they call use cases; `validateApplication`
-  raises the `applicationInvalid` BPMN error through the job client so the error boundary event catches it.
+  `adapter/inbound/zeebe`. Workers hold no business logic — they call use cases; `orderBike` raises
+  the `bikeUnavailable` BPMN error through the job client when the dealer has no bike, so the error
+  boundary event catches it.
 - **No business key.** Zeebe has none, so the leasing `applicationId` travels as a process variable and
   is the message correlation key on every catch event.
 - **Generated process API.** The `bpmn-to-code` Gradle plugin turns each `.bpmn` into a typed,
