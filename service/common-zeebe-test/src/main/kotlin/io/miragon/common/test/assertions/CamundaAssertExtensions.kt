@@ -8,7 +8,7 @@ fun ProcessInstanceAssert.hasCompletedElements(vararg elements: FlowNode): Proce
     hasCompletedElements(*elements.map { it.id.value }.toTypedArray())
 
 fun ProcessInstanceAssert.hasCompletedElementsInOrder(path: ProcessPath<*>): ProcessInstanceAssert =
-    hasCompletedElementsInOrder(*path.ids.toTypedArray())
+    hasCompletedElementsInOrder(*path.ids)
 
 fun ProcessInstanceAssert.hasCompletedElements(path: ProcessPath<*>): ProcessInstanceAssert =
-    hasCompletedElements(*path.distinctIds.toTypedArray())
+    hasCompletedElements(*path.distinctIds)
