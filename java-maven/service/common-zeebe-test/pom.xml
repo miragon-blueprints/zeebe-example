@@ -13,7 +13,7 @@
 
     <artifactId>common-zeebe-test</artifactId>
     <name>common-zeebe-test</name>
-    <description>Shared Camunda 8 process-test configuration and path-assertion helpers.</description>
+    <description>Shared Camunda 8 process-test configuration.</description>
 
     <dependencies>
         <dependency>

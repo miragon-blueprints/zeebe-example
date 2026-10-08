@@ -39,7 +39,7 @@
         <camunda.version>8.9.21</camunda.version>
 
         <!-- BPMN-to-code (typed process API generation, runtime and model validation) -->
-        <bpmn-to-code.version>6.1.1</bpmn-to-code.version>
+        <bpmn-to-code.version>6.2.0</bpmn-to-code.version>
 
         <!-- OpenAPI — 3.x is the Spring Boot 4 line -->
         <springdoc.version>3.1.1</springdoc.version>
@@ -50,7 +50,7 @@
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
 
         <!--
-            Override of the Boot BOM's Kotlin version: bpmn-to-code 6.1.1 is compiled against Kotlin 2.4, and the
+            Override of the Boot BOM's Kotlin version: bpmn-to-code is compiled against Kotlin 2.4, and the
             BOM would otherwise downgrade its kotlin-stdlib to 2.3.x.
         -->
         <kotlin.version>2.4.10</kotlin.version>

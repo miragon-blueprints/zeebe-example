@@ -7,7 +7,6 @@ This module provides reusable test configuration that can be used across multipl
 ## 📌 What's Included
 
 - **TestProcessEngineConfiguration**: Spring test configuration that ensures `ProcessEngineApi` uses the test `CamundaClient` provided by `@CamundaSpringProcessTest`
-- **ProcessPathIds**: turns a compile-checked bpmn-to-code `PathWalk` into the element-id arrays Camunda's `ProcessInstanceAssert` expects — `inOrder` keeps repeats (for `hasCompletedElementsInOrder`), `distinct` drops them (for `hasCompletedElements`)
 
 ## 🔧 How to Use
 
@@ -38,5 +37,5 @@ PathWalk.Trail path = PathWalk.from(FlowNodes.StartEventLeasingRequestReceived.I
     .then(n -> n.serviceTaskValidateApplication())
     // …
     .end(n -> n.endEventLeasingActive());
-assertThatProcessInstance(instance).hasCompletedElementsInOrder(ProcessPathIds.inOrder(path));
+assertThatProcessInstance(instance).hasCompletedElementsInOrder(path.getIds());
 ```
