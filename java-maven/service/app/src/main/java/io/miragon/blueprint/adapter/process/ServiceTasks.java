@@ -30,8 +30,6 @@ public final class ServiceTasks {
 
   public static final String MIRAVELO_SEND_REMINDER_MAIL = "miravelo.sendReminderMail";
 
-  public static final String MIRAVELO_VALIDATE_APPLICATION = "miravelo.validateApplication";
-
   private ServiceTasks() {
   }
 
@@ -47,7 +45,6 @@ public final class ServiceTasks {
         MIRAVELO_SEND_CANCELLATION_CONFIRMATION,
         MIRAVELO_SEND_CONTRACT,
         MIRAVELO_SEND_REJECTION,
-        MIRAVELO_SEND_REMINDER_MAIL,
-        MIRAVELO_VALIDATE_APPLICATION);
+        MIRAVELO_SEND_REMINDER_MAIL);
   }
 }

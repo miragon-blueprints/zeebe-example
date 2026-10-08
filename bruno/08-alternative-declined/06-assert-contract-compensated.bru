@@ -1,0 +1,33 @@
+meta {
+  name: The contract was compensated
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{camundaRest}}/element-instances/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processInstanceKey": "{{processInstanceKey}}",
+      "elementId": "serviceTask_cancelContract",
+      "state": "COMPLETED"
+    }
+  }
+}
+
+script:pre-request {
+  const key = bru.getVar("processInstanceKey");
+  await pollSearch("/element-instances/search",
+    { filter: { processInstanceKey: key, elementId: "serviceTask_cancelContract", state: "COMPLETED" } },
+    (b) => b && Array.isArray(b.items) && b.items.length >= 1);
+}
+
+assert {
+  res.status: eq 200
+  res.body.items: length 1
+}

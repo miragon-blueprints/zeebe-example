@@ -34,7 +34,7 @@ class YourProcessTest {
 ```java
 // Assert the walked path against the generated process API
 PathWalk.Trail path = PathWalk.from(FlowNodes.StartEventLeasingRequestReceived.INSTANCE)
-    .then(n -> n.serviceTaskValidateApplication())
+    .then(n -> n.businessRuleTaskCheckCreditRating())
     // …
     .end(n -> n.endEventLeasingActive());
 assertThatProcessInstance(instance).hasCompletedElementsInOrder(path.getIds());

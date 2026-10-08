@@ -84,8 +84,8 @@ public final class BikeLeasingProcessProcessApi {
       return EndEventProspectReminded.INSTANCE;
     }
 
-    public static EventApplicationInvalid eventApplicationInvalid() {
-      return EventApplicationInvalid.INSTANCE;
+    public static EventBikeUnavailable eventBikeUnavailable() {
+      return EventBikeUnavailable.INSTANCE;
     }
 
     public static EventCompensateContract eventCompensateContract() {
@@ -140,10 +140,6 @@ public final class BikeLeasingProcessProcessApi {
       return GatewayAwaitSignature.INSTANCE;
     }
 
-    public static GatewayBikeAvailable gatewayBikeAvailable() {
-      return GatewayBikeAvailable.INSTANCE;
-    }
-
     public static GatewayBikeSourceJoin gatewayBikeSourceJoin() {
       return GatewayBikeSourceJoin.INSTANCE;
     }
@@ -176,6 +172,10 @@ public final class BikeLeasingProcessProcessApi {
       return ServiceTaskCancelPolicy.INSTANCE;
     }
 
+    public static ServiceTaskConfirmContractCancellation serviceTaskConfirmContractCancellation() {
+      return ServiceTaskConfirmContractCancellation.INSTANCE;
+    }
+
     public static ServiceTaskIssueInsurancePolicy serviceTaskIssueInsurancePolicy() {
       return ServiceTaskIssueInsurancePolicy.INSTANCE;
     }
@@ -199,10 +199,6 @@ public final class BikeLeasingProcessProcessApi {
 
     public static ServiceTaskSendReminderMail serviceTaskSendReminderMail() {
       return ServiceTaskSendReminderMail.INSTANCE;
-    }
-
-    public static ServiceTaskValidateApplication serviceTaskValidateApplication() {
-      return ServiceTaskValidateApplication.INSTANCE;
     }
 
     public static StartEventApplicationWithdrawn startEventApplicationWithdrawn() {
@@ -240,7 +236,7 @@ public final class BikeLeasingProcessProcessApi {
           EndEventLeasingActive.INSTANCE,
           EndEventNotSigned.INSTANCE,
           EndEventProspectReminded.INSTANCE,
-          EventApplicationInvalid.INSTANCE,
+          EventBikeUnavailable.INSTANCE,
           EventCompensateContract.INSTANCE,
           EventCompensateInsurance.INSTANCE,
           EventCompensateOrder.INSTANCE,
@@ -254,7 +250,6 @@ public final class BikeLeasingProcessProcessApi {
           EventWithdrawalPeriodElapsed.INSTANCE,
           GatewayAlternativeFound.INSTANCE,
           GatewayAwaitSignature.INSTANCE,
-          GatewayBikeAvailable.INSTANCE,
           GatewayBikeSourceJoin.INSTANCE,
           GatewayFork.INSTANCE,
           GatewayIsSolvent.INSTANCE,
@@ -263,13 +258,13 @@ public final class BikeLeasingProcessProcessApi {
           ServiceTaskActivateLeasing.INSTANCE,
           ServiceTaskCancelContract.INSTANCE,
           ServiceTaskCancelPolicy.INSTANCE,
+          ServiceTaskConfirmContractCancellation.INSTANCE,
           ServiceTaskIssueInsurancePolicy.INSTANCE,
           ServiceTaskOrderBike.INSTANCE,
           ServiceTaskSendCancellationConfirmation.INSTANCE,
           ServiceTaskSendContract.INSTANCE,
           ServiceTaskSendRejection.INSTANCE,
           ServiceTaskSendReminderMail.INSTANCE,
-          ServiceTaskValidateApplication.INSTANCE,
           StartEventApplicationWithdrawn.INSTANCE,
           StartEventCustomerEligible.INSTANCE,
           StartEventLeasingRequestReceived.INSTANCE,
@@ -458,13 +453,13 @@ public final class BikeLeasingProcessProcessApi {
       }
     }
 
-    public static final class EventApplicationInvalid extends AbstractFlowNode implements HasSuccessors<EventApplicationInvalid.Next>, BoundaryEvent<ServiceTaskValidateApplication>, ErrorEvent {
-      public static final String ELEMENT_ID = "event_applicationInvalid";
+    public static final class EventBikeUnavailable extends AbstractFlowNode implements HasSuccessors<EventBikeUnavailable.Next>, BoundaryEvent<ServiceTaskOrderBike>, ErrorEvent {
+      public static final String ELEMENT_ID = "event_bikeUnavailable";
 
-      public static final EventApplicationInvalid INSTANCE = new EventApplicationInvalid();
+      public static final EventBikeUnavailable INSTANCE = new EventBikeUnavailable();
 
-      private EventApplicationInvalid() {
-        super(new ElementId(ELEMENT_ID), BpmnElementType.BOUNDARY_EVENT, "Application invalid");
+      private EventBikeUnavailable() {
+        super(new ElementId(ELEMENT_ID), BpmnElementType.BOUNDARY_EVENT, "Bike unavailable");
       }
 
       @Override
@@ -474,12 +469,12 @@ public final class BikeLeasingProcessProcessApi {
 
       @Override
       public BpmnErrorDefinition getError() {
-        return Errors.APPLICATION_INVALID;
+        return Errors.BIKE_UNAVAILABLE;
       }
 
       @Override
-      public ServiceTaskValidateApplication getAttachedTo() {
-        return ServiceTaskValidateApplication.INSTANCE;
+      public ServiceTaskOrderBike getAttachedTo() {
+        return ServiceTaskOrderBike.INSTANCE;
       }
 
       @Override
@@ -493,8 +488,8 @@ public final class BikeLeasingProcessProcessApi {
       }
 
       public static final class Next {
-        public SequenceFlows<GatewayRejectionJoin> gatewayRejectionJoin() {
-          return SequenceFlows.single(new ElementId("flow_invalidToRejectionJoin"), GatewayRejectionJoin.INSTANCE);
+        public SequenceFlows<UserTaskClarifyAlternative> userTaskClarifyAlternative() {
+          return SequenceFlows.single(new ElementId("flow_bikeUnavailableToClarify"), UserTaskClarifyAlternative.INSTANCE);
         }
       }
     }
@@ -831,8 +826,9 @@ public final class BikeLeasingProcessProcessApi {
       }
 
       public static final class Next {
-        public SequenceFlows<EndEventContractCancelled> endEventContractCancelled() {
-          return SequenceFlows.single(new ElementId("flow_reversalToContractCancelled"), EndEventContractCancelled.INSTANCE);
+        public SequenceFlows<ServiceTaskConfirmContractCancellation> serviceTaskConfirmContractCancellation(
+            ) {
+          return SequenceFlows.single(new ElementId("flow_reversalToConfirmCancellation"), ServiceTaskConfirmContractCancellation.INSTANCE);
         }
       }
     }
@@ -914,31 +910,6 @@ public final class BikeLeasingProcessProcessApi {
 
         public SequenceFlows<EventSignatureDeadline> eventSignatureDeadline() {
           return SequenceFlows.single(new ElementId("flow_awaitToSignatureDeadline"), EventSignatureDeadline.INSTANCE);
-        }
-      }
-    }
-
-    public static final class GatewayBikeAvailable extends AbstractFlowNode implements HasSuccessors<GatewayBikeAvailable.Next> {
-      public static final String ELEMENT_ID = "gateway_bikeAvailable";
-
-      public static final GatewayBikeAvailable INSTANCE = new GatewayBikeAvailable();
-
-      private GatewayBikeAvailable() {
-        super(new ElementId(ELEMENT_ID), BpmnElementType.EXCLUSIVE_GATEWAY, "Bike available?");
-      }
-
-      @Override
-      public Next getNext() {
-        return new Next();
-      }
-
-      public static final class Next {
-        public SequenceFlows<GatewayJoin> gatewayJoin() {
-          return SequenceFlows.single(new ElementId("flow_bikeAvailableToJoin"), "Yes", null, true, GatewayJoin.INSTANCE);
-        }
-
-        public SequenceFlows<UserTaskClarifyAlternative> userTaskClarifyAlternative() {
-          return SequenceFlows.single(new ElementId("flow_bikeUnavailableToClarify"), "No", "=not(bikeAvailable)", false, UserTaskClarifyAlternative.INSTANCE);
         }
       }
     }
@@ -1112,6 +1083,32 @@ public final class BikeLeasingProcessProcessApi {
       }
     }
 
+    public static final class ServiceTaskConfirmContractCancellation extends AbstractFlowNode implements HasSuccessors<ServiceTaskConfirmContractCancellation.Next>, HasJobType {
+      public static final String ELEMENT_ID = "serviceTask_confirmContractCancellation";
+
+      public static final ServiceTaskConfirmContractCancellation INSTANCE = new ServiceTaskConfirmContractCancellation();
+
+      private ServiceTaskConfirmContractCancellation() {
+        super(new ElementId(ELEMENT_ID), BpmnElementType.SERVICE_TASK, "Send cancellation confirmation");
+      }
+
+      @Override
+      public String getJobType() {
+        return ServiceTasks.MIRAVELO_SEND_CANCELLATION_CONFIRMATION;
+      }
+
+      @Override
+      public Next getNext() {
+        return new Next();
+      }
+
+      public static final class Next {
+        public SequenceFlows<EndEventContractCancelled> endEventContractCancelled() {
+          return SequenceFlows.single(new ElementId("flow_confirmCancellationToContractCancelled"), EndEventContractCancelled.INSTANCE);
+        }
+      }
+    }
+
     public static final class ServiceTaskIssueInsurancePolicy extends AbstractFlowNode implements HasSuccessors<ServiceTaskIssueInsurancePolicy.Next>, HasJobType {
       public static final String ELEMENT_ID = "serviceTask_issueInsurancePolicy";
 
@@ -1169,8 +1166,6 @@ public final class BikeLeasingProcessProcessApi {
       }
 
       public static final class Variables extends VariableDefinitions {
-        public static final VariableName.Output BIKE_AVAILABLE = new VariableName.Output(ProcessVariables.BIKE_AVAILABLE);
-
         public static final VariableName.Output ORDER_ID = new VariableName.Output(ProcessVariables.ORDER_ID);
 
         private Variables() {
@@ -1178,17 +1173,21 @@ public final class BikeLeasingProcessProcessApi {
 
         @Override
         public List<VariableName> getAll() {
-          return List.of(BIKE_AVAILABLE, ORDER_ID);
+          return List.of(ORDER_ID);
         }
       }
 
       public static final class Next {
+        public AttachedBoundaryEvent<EventBikeUnavailable> eventBikeUnavailable() {
+          return new AttachedBoundaryEvent<>(EventBikeUnavailable.INSTANCE);
+        }
+
         public AttachedBoundaryEvent<EventCompensateOrder> eventCompensateOrder() {
           return new AttachedBoundaryEvent<>(EventCompensateOrder.INSTANCE);
         }
 
-        public SequenceFlows<GatewayBikeAvailable> gatewayBikeAvailable() {
-          return SequenceFlows.single(new ElementId("flow_orderToBikeAvailable"), GatewayBikeAvailable.INSTANCE);
+        public SequenceFlows<GatewayJoin> gatewayJoin() {
+          return SequenceFlows.single(new ElementId("flow_orderToJoin"), GatewayJoin.INSTANCE);
         }
       }
     }
@@ -1293,37 +1292,6 @@ public final class BikeLeasingProcessProcessApi {
       public static final class Next {
         public SequenceFlows<EndEventProspectReminded> endEventProspectReminded() {
           return SequenceFlows.single(new ElementId("flow_sendMailToReminded"), EndEventProspectReminded.INSTANCE);
-        }
-      }
-    }
-
-    public static final class ServiceTaskValidateApplication extends AbstractFlowNode implements HasSuccessors<ServiceTaskValidateApplication.Next>, HasJobType {
-      public static final String ELEMENT_ID = "serviceTask_validateApplication";
-
-      public static final ServiceTaskValidateApplication INSTANCE = new ServiceTaskValidateApplication();
-
-      private ServiceTaskValidateApplication() {
-        super(new ElementId(ELEMENT_ID), BpmnElementType.SERVICE_TASK, "Validate application");
-      }
-
-      @Override
-      public String getJobType() {
-        return ServiceTasks.MIRAVELO_VALIDATE_APPLICATION;
-      }
-
-      @Override
-      public Next getNext() {
-        return new Next();
-      }
-
-      public static final class Next {
-        public SequenceFlows<BusinessRuleTaskCheckCreditRating> businessRuleTaskCheckCreditRating(
-            ) {
-          return SequenceFlows.single(new ElementId("flow_validateToCheckCredit"), BusinessRuleTaskCheckCreditRating.INSTANCE);
-        }
-
-        public AttachedBoundaryEvent<EventApplicationInvalid> eventApplicationInvalid() {
-          return new AttachedBoundaryEvent<>(EventApplicationInvalid.INSTANCE);
         }
       }
     }
@@ -1442,8 +1410,9 @@ public final class BikeLeasingProcessProcessApi {
       }
 
       public static final class Next {
-        public SequenceFlows<ServiceTaskValidateApplication> serviceTaskValidateApplication() {
-          return SequenceFlows.single(new ElementId("flow_receivedToValidate"), ServiceTaskValidateApplication.INSTANCE);
+        public SequenceFlows<BusinessRuleTaskCheckCreditRating> businessRuleTaskCheckCreditRating(
+            ) {
+          return SequenceFlows.single(new ElementId("flow_receivedToCheckCredit"), BusinessRuleTaskCheckCreditRating.INSTANCE);
         }
       }
     }

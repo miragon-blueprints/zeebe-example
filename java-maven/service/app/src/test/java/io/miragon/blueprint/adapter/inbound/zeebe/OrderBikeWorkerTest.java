@@ -13,13 +13,17 @@ import io.camunda.client.api.CamundaFuture;
 import io.camunda.client.api.command.CompleteJobCommandStep1;
 import io.camunda.client.api.command.FailJobCommandStep1;
 import io.camunda.client.api.command.FailJobCommandStep1.FailJobCommandStep2;
+import io.camunda.client.api.command.ThrowErrorCommandStep1;
+import io.camunda.client.api.command.ThrowErrorCommandStep1.ThrowErrorCommandStep2;
 import io.camunda.client.api.response.ActivatedJob;
 import io.camunda.client.api.response.CompleteJobResponse;
 import io.camunda.client.api.response.FailJobResponse;
+import io.camunda.client.api.response.ThrowErrorResponse;
 import io.camunda.client.api.worker.JobClient;
 import io.miragon.blueprint.adapter.outbound.dealer.BikeDealerAdapter.DealerUnavailableException;
 import io.miragon.blueprint.application.port.inbound.OrderBikeUseCase;
 import io.miragon.blueprint.domain.bike.BikeId;
+import io.miragon.blueprint.domain.bike.BikeUnavailableException;
 import io.miragon.blueprint.domain.bike.OrderId;
 import io.miragon.blueprint.domain.leasing.ApplicationId;
 import java.util.Map;
@@ -50,6 +54,12 @@ class OrderBikeWorkerTest {
 
     private final CamundaFuture<FailJobResponse> failResponse = mock();
 
+    private final ThrowErrorCommandStep1 throwErrorCommand = mock(ThrowErrorCommandStep1.class);
+
+    private final ThrowErrorCommandStep2 throwErrorCommandStep2 = mock(ThrowErrorCommandStep2.class);
+
+    private final CamundaFuture<ThrowErrorResponse> throwErrorResponse = mock();
+
     @BeforeEach
     void stubCommandChains() {
         when(client.newCompleteCommand(job)).thenReturn(completeCommand);
@@ -60,15 +70,18 @@ class OrderBikeWorkerTest {
         when(failCommandStep2.retryBackoff(any())).thenReturn(failCommandStep2);
         when(failCommandStep2.errorMessage(any())).thenReturn(failCommandStep2);
         when(failCommandStep2.send()).thenReturn(failResponse);
+        when(client.newThrowErrorCommand(job)).thenReturn(throwErrorCommand);
+        when(throwErrorCommand.errorCode(any())).thenReturn(throwErrorCommandStep2);
+        when(throwErrorCommandStep2.errorMessage(any())).thenReturn(throwErrorCommandStep2);
+        when(throwErrorCommandStep2.send()).thenReturn(throwErrorResponse);
     }
 
     @Test
-    @DisplayName("completes the job with the order id and availability as output variables")
-    void completesTheJobWithTheOrderIdAndAvailabilityAsOutputVariables() {
+    @DisplayName("completes the job with the order id as output variable")
+    void completesTheJobWithTheOrderIdAsOutputVariable() {
         // given
         UUID id = UUID.randomUUID();
-        when(useCase.orderBike(ApplicationId.of(id.toString())))
-            .thenReturn(new OrderBikeUseCase.Result(new OrderId("ORDER-1"), true));
+        when(useCase.orderBike(ApplicationId.of(id.toString()))).thenReturn(new OrderId("ORDER-1"));
 
         // when
         worker.handle(client, job, id.toString());
@@ -77,31 +90,27 @@ class OrderBikeWorkerTest {
         ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
         verify(client).newCompleteCommand(job);
         verify(completeCommand).variables(variables.capture());
+        verify(client, never()).newThrowErrorCommand(any(ActivatedJob.class));
         verify(client, never()).newFailCommand(any(ActivatedJob.class));
-        assertThat(variables.getValue())
-            .containsEntry("orderId", "ORDER-1")
-            .containsEntry("bikeAvailable", true);
+        assertThat(variables.getValue()).isEqualTo(Map.of("orderId", "ORDER-1"));
     }
 
     @Test
-    @DisplayName("completes the job reporting an unavailable bike with a null order id")
-    void completesTheJobReportingAnUnavailableBikeWithANullOrderId() {
+    @DisplayName("throws the bikeUnavailable BPMN error when the dealer cannot deliver the bike")
+    void throwsTheBikeUnavailableBpmnErrorWhenTheDealerCannotDeliverTheBike() {
         // given
         UUID id = UUID.randomUUID();
-        when(useCase.orderBike(any()))
-            .thenReturn(new OrderBikeUseCase.Result(null, false));
+        when(useCase.orderBike(any())).thenThrow(new BikeUnavailableException(new BikeId("BIKE-OOS")));
 
         // when
         worker.handle(client, job, id.toString());
 
-        // then
-        ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
-        verify(client).newCompleteCommand(job);
-        verify(completeCommand).variables(variables.capture());
+        // then: the BPMN error is thrown and the job is neither completed nor failed
+        verify(client).newThrowErrorCommand(job);
+        verify(throwErrorCommand).errorCode("bikeUnavailable");
+        verify(throwErrorCommandStep2).errorMessage("Bike BIKE-OOS is not available at the dealer");
+        verify(client, never()).newCompleteCommand(any(ActivatedJob.class));
         verify(client, never()).newFailCommand(any(ActivatedJob.class));
-        assertThat(variables.getValue())
-            .containsEntry("orderId", null)
-            .containsEntry("bikeAvailable", false);
     }
 
     @Test
@@ -119,5 +128,6 @@ class OrderBikeWorkerTest {
         verify(client).newFailCommand(job);
         verify(failCommand).retries(2);
         verify(client, never()).newCompleteCommand(any(ActivatedJob.class));
+        verify(client, never()).newThrowErrorCommand(any(ActivatedJob.class));
     }
 }

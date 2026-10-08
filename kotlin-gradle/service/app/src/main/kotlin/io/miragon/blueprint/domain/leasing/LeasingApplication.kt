@@ -21,14 +21,6 @@ data class LeasingApplication(
     val contractId: ContractId? = null,
 ) {
 
-    /** Ensures the application is fundamentally processable; throws otherwise. */
-    fun validate(): LeasingApplication {
-        if (monthlyNetIncome <= 0.0) {
-            throw ApplicationInvalidException(id, "monthly net income must be greater than zero")
-        }
-        return this
-    }
-
     /** Records the contract the contract system issued for this application. */
     fun withContract(contractId: ContractId): LeasingApplication =
         copy(contractId = contractId)
@@ -63,8 +55,9 @@ data class LeasingApplication(
             monthlyNetIncome: Double,
             bikeId: BikeId,
             createdAt: LocalDateTime,
-        ): LeasingApplication =
-            LeasingApplication(
+        ): LeasingApplication {
+            require(monthlyNetIncome > 0.0) { "Monthly net income must be greater than zero" }
+            return LeasingApplication(
                 id = id,
                 customerName = customerName,
                 email = email,
@@ -74,5 +67,6 @@ data class LeasingApplication(
                 status = LeasingStatus.RECEIVED,
                 createdAt = createdAt,
             )
+        }
     }
 }
