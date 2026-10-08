@@ -3,6 +3,7 @@ package io.miragon.blueprint.application.service
 import io.miragon.blueprint.application.port.outbound.BikeDealerPort
 import io.miragon.blueprint.application.port.outbound.LeasingApplicationRepository
 import io.miragon.blueprint.domain.bike.BikeId
+import io.miragon.blueprint.domain.leasing.ApplicationId
 import io.miragon.blueprint.domain.leasing.LeasingStatus
 import io.miragon.blueprint.domain.bike.OrderId
 import io.miragon.blueprint.domain.leasing.testLeasingApplication
@@ -11,7 +12,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class OrderBikeServiceTest {
 
@@ -59,5 +62,19 @@ class OrderBikeServiceTest {
         verify(exactly = 0) { bikeDealer.order(any()) }
         verify(exactly = 0) { repository.save(any()) }
         confirmVerified(bikeDealer)
+    }
+
+    @Test
+    fun `orderBike fails for an unknown application`() {
+
+        // given: no application is stored under the id
+        val id = ApplicationId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"))
+        every { repository.findById(id) } returns null
+
+        // when / then: the lookup fails with an IllegalStateException, which the REST adapter maps to 404
+        assertThatThrownBy { underTest.orderBike(id) }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessage("Unknown application $id")
+        verify(exactly = 0) { repository.save(any()) }
     }
 }

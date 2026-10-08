@@ -70,4 +70,23 @@ class GetLeasingApplicationControllerTest {
         // then: the response is 404 Not Found
         assertThat(response.response.status).isEqualTo(404)
     }
+
+    @Test
+    fun `returns null order, contract and bike model for an application that was not ordered yet`() {
+
+        // given: a freshly received application without order or contract, whose bike is unknown to the portfolio
+        val application = testLeasingApplication()
+        every { query.byId(application.id) } returns GetLeasingApplicationQuery.Result(application, null)
+        val operation = get("/api/bike-leasing/{applicationId}", application.id.value.toString())
+
+        // when: the request is performed
+        val response = mockMvc.perform(operation).andReturn()
+
+        // then: the optional fields are serialised as JSON null
+        assertThat(response.response.status).isEqualTo(200)
+        assertThat(response.response.contentAsString)
+            .contains("\"bikeModel\":null", "\"orderId\":null", "\"contractId\":null")
+        verify { query.byId(application.id) }
+        confirmVerified(query)
+    }
 }

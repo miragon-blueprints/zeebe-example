@@ -64,4 +64,12 @@ class LeasingApplicationTest {
         // when / then: validation reports the application as invalid
         assertThatThrownBy { application.validate() }.isInstanceOf(ApplicationInvalidException::class.java)
     }
+
+    @Test
+    fun `validate returns the application unchanged when it has income`() {
+        // given: a solvent application
+        val application = testLeasingApplication(monthlyNetIncome = 3500.0)
+        // when / then: validation passes and hands back the same application
+        assertThat(application.validate()).isSameAs(application)
+    }
 }

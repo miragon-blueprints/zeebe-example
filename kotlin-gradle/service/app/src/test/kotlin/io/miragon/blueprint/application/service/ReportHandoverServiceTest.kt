@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -56,5 +57,20 @@ class ReportHandoverServiceTest {
         verify(exactly = 0) { repository.findById(any()) }
         verify(exactly = 0) { repository.save(any()) }
         confirmVerified(process, repository)
+    }
+
+    @Test
+    fun `reportHandover fails for an unknown application`() {
+
+        // given: no application is stored under the id
+        val id = ApplicationId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"))
+        every { process.correlateHandoverReported(id) } just Runs
+        every { repository.findById(id) } returns null
+
+        // when / then: the lookup fails with an IllegalStateException, which the REST adapter maps to 404
+        assertThatThrownBy { underTest.reportHandover(id) }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessage("Unknown application $id")
+        verify(exactly = 0) { repository.save(any()) }
     }
 }
