@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.miragon.blueprint</groupId>
+        <artifactId>zeebe-example</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>app</artifactId>
+    <name>app</name>
+    <description>MiraVelo bike-leasing service: hexagonal Spring Boot backend driven by Zeebe job workers.</description>
+
+    <properties>
+        <!-- The executable module: opt in to the Spring Boot run / image goals the root skips. -->
+        <spring-boot.run.skip>false</spring-boot.run.skip>
+        <spring-boot.build-image.skip>false</spring-boot.build-image.skip>
+        <!--
+            In-container Camunda process tests are mildly async; retry to keep CI stable. Read by surefire as a
+            property, so a local run can turn it off with -Dsurefire.rerunFailingTestsCount=0.
+        -->
+        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+        <!-- Opt in to mutation testing. Diff-scoped on PRs via -DtargetClasses=..., full sweep nightly. -->
+        <skipPitest>false</skipPitest>
+        <targetClasses>io.miragon.blueprint.*</targetClasses>
+        <!-- Matches the 4 vCPUs of a GitHub-hosted runner; override locally with -Dpitest.threads=N. -->
+        <pitest.threads>4</pitest.threads>
+    </properties>
+
+    <dependencies>
+        <!-- Application -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Database -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Camunda 8 / Zeebe -->
+        <dependency>
+            <groupId>io.camunda</groupId>
+            <artifactId>camunda-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.miragon.blueprint</groupId>
+            <artifactId>common-zeebe</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.miragon</groupId>
+            <artifactId>bpmn-to-code-runtime</artifactId>
+        </dependency>
+
+        <!-- OpenAPI — springdoc generates the contract served at /v3/api-docs and the Swagger UI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+
+        <!-- Observability — actuator probes (health/liveness/readiness, info, metrics) and a Prometheus registry -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.camunda</groupId>
+            <artifactId>camunda-process-test-spring</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <!--
+                    Unused (Azure AI judge support). Its Netty native transports are managed with runtime scope by
+                    the Boot BOM, which would otherwise lift them out of the test scope into the boot jar.
+                -->
+                <exclusion>
+                    <groupId>com.azure</groupId>
+                    <artifactId>azure-core-http-netty</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.miragon</groupId>
+            <artifactId>bpmn-to-code-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.miragon.blueprint</groupId>
+            <artifactId>common-zeebe-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.miragon.blueprint</groupId>
+            <artifactId>common-architecture-tests</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Generates the typed `*ProcessApi` classes (element ids, messages, timers, variables, …) from
+                the BPMN models, so workers and tests reference process elements as compile-checked
+                constants. The output is committed and drift-gated in CI.
+            -->
+            <plugin>
+                <groupId>io.miragon</groupId>
+                <artifactId>bpmn-to-code-maven</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-bpmn-models</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate-bpmn-api</goal>
+                        </goals>
+                        <configuration>
+                            <baseDir>${project.basedir}</baseDir>
+                            <filePattern>src/main/resources/bpmn/*.bpmn</filePattern>
+                            <outputFolderPath>${project.basedir}/src/main/java</outputFolderPath>
+                            <packagePath>io.miragon.blueprint.adapter.process</packagePath>
+                            <outputLanguage>JAVA</outputLanguage>
+                            <processEngine>ZEEBE</processEngine>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!--
+                        OCI image for the backend, built by Spring's Cloud Native Buildpacks integration — no
+                        Dockerfile to maintain (layered, non-root by default). Build with
+                        `./mvnw -pl service/app -am spring-boot:build-image -DskipTests`.
+                    -->
+                    <image>
+                        <name>miravelo/zeebe-example:${project.version}</name>
+                        <env>
+                            <!-- Pin the JVM the buildpack installs to the version the code targets. -->
+                            <BP_JVM_VERSION>21</BP_JVM_VERSION>
+                        </env>
+                    </image>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                        <configuration>
+                            <!-- The real build time; the default is Maven's fixed reproducible-build timestamp. -->
+                            <time>${maven.build.timestamp}</time>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Diff-scoped on PRs (via -DtargetClasses=...), full sweep nightly. Not bound to the lifecycle. -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <targetTests>
+                        <param>io.miragon.blueprint.*</param>
+                    </targetTests>
+                    <failWhenNoMutations>false</failWhenNoMutations>
+                    <excludedClasses>
+                        <!-- Generated typed process API — not hand-written logic. -->
+                        <param>io.miragon.blueprint.adapter.process.*</param>
+                        <!-- Application bootstrap, outside the hexagonal layers. -->
+                        <param>io.miragon.blueprint.BikeLeasingApplication*</param>
+                        <param>io.miragon.blueprint.BikeCatalogueSeeder*</param>
+                        <!-- Dev-only CORS escape hatch. -->
+                        <param>io.miragon.blueprint.adapter.inbound.rest.DevCorsConfiguration*</param>
+                        <!--
+                            Zeebe engine glue (job workers, message/user-task client) — exercised by the
+                            in-container process test, not unit-mutated.
+                        -->
+                        <param>io.miragon.blueprint.adapter.inbound.zeebe.*</param>
+                        <param>io.miragon.blueprint.adapter.outbound.zeebe.*</param>
+                    </excludedClasses>
+                    <excludedTestClasses>
+                        <param>io.miragon.blueprint.process.*</param>
+                        <param>io.miragon.blueprint.architecture.*</param>
+                    </excludedTestClasses>
+                    <threads>${pitest.threads}</threads>
+                    <timeoutFactor>2.0</timeoutFactor>
+                    <avoidCallsTo>
+                        <avoidCallsTo>org.slf4j</avoidCallsTo>
+                    </avoidCallsTo>
+                    <mutators>
+                        <mutator>DEFAULTS</mutator>
+                    </mutators>
+                    <outputFormats>
+                        <param>HTML</param>
+                        <param>XML</param>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                    <mutationThreshold>80</mutationThreshold>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
