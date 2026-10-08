@@ -4,8 +4,8 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <!--
-  The two source-structure guidelines Konsist enforces in the Kotlin build (see docs/adr/0007).
-  ArchUnit reads bytecode and cannot see these; Checkstyle reads source and can.
+  The two source-structure rules ArchUnit cannot express: it reads bytecode, where imports and the
+  file layout are gone. Checkstyle reads the source. See docs/adr/0007.
   The generated adapter/process package is excluded via the maven-checkstyle-plugin <excludes>.
 -->
 <module name="Checker">
