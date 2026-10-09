@@ -41,8 +41,9 @@
              once the retries hit 0 (~20s). Reproduce it with the 06-incident-demo Bruno collection
              (poison bike id BIKE-FAIL). -->
         <zeebe:taskDefinition type="miravelo.orderBike" retries="3" />
-        <!-- Result variable the orderBike worker writes. -->
+        <!-- The bike the orderBike worker orders, and the result variable it writes. -->
         <zeebe:ioMapping>
+          <zeebe:input source="=bikeId" target="bikeId" />
           <zeebe:output source="=orderId" target="orderId" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
@@ -147,14 +148,16 @@
       <bpmn:outgoing>flow_joinToHandover</bpmn:outgoing>
     </bpmn:parallelGateway>
     <bpmn:userTask id="userTask_clarifyAlternative" name="Clarify alternative with customer">
-      <bpmn:documentation>Completable two ways: a human via the deployed Camunda Form (Tasklist), or a client via POST /api/bike-leasing/{id}/clarify-alternative. The REST path is the recommended one — it routes through the domain (persisting the chosen alternative bike on the aggregate) before completing the task, so the captured data actually reaches the domain model. See "Clarify return with supplier" in cancel-bike-order.bpmn for the form-only anti-pattern where data never leaves the process.</bpmn:documentation>
+      <bpmn:documentation>Completable two ways: a human via the deployed Camunda Form (Tasklist), or a client via POST /api/bike-leasing/{id}/clarify-alternative. Both paths hand the chosen alternative to the process as the bikeId variable, which the re-order reads and persists on the aggregate, so the captured data reaches the domain model either way. The REST path additionally registers the bike's model in the portfolio. See "Clarify return with supplier" in cancel-bike-order.bpmn for the form-only anti-pattern where data never leaves the process.</bpmn:documentation>
       <bpmn:extensionElements>
         <zeebe:userTask />
         <!-- The Camunda Form still renders in the Tasklist for the human completion path. -->
         <zeebe:formDefinition formId="clarifyAlternativeForm" />
-        <!-- The decision the task produces; declared for bpmn-to-code. -->
+        <!-- The decision the task produces and the alternative bike the re-order picks up. With output
+             mappings declared, only mapped variables leave the task scope. -->
         <zeebe:ioMapping>
           <zeebe:output source="=alternativeFound" target="alternativeFound" />
+          <zeebe:output source="=bikeId" target="bikeId" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>flow_bikeUnavailableToClarify</bpmn:incoming>

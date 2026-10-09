@@ -8,6 +8,7 @@ import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNod
 import io.miragon.blueprint.adapter.process.Errors
 import io.miragon.blueprint.adapter.process.ServiceTasks
 import io.miragon.blueprint.application.port.inbound.OrderBikeUseCase
+import io.miragon.blueprint.domain.bike.BikeId
 import io.miragon.blueprint.domain.bike.BikeUnavailableException
 import io.miragon.blueprint.domain.leasing.ApplicationId
 import org.springframework.stereotype.Component
@@ -32,9 +33,9 @@ class OrderBikeWorker(
     private val retryBackoff: Duration = Duration.ofSeconds(10)
 
     @JobWorker(type = ServiceTasks.MIRAVELO_ORDER_BIKE, autoComplete = [false])
-    fun handle(client: JobClient, job: ActivatedJob, @Variable applicationId: String) {
+    fun handle(client: JobClient, job: ActivatedJob, @Variable applicationId: String, @Variable bikeId: String) {
         try {
-            val orderId = useCase.orderBike(ApplicationId.of(applicationId))
+            val orderId = useCase.orderBike(ApplicationId.of(applicationId), BikeId(bikeId))
             client.newCompleteCommand(job)
                 .variables(mapOf(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.value to orderId.value))
                 .send()

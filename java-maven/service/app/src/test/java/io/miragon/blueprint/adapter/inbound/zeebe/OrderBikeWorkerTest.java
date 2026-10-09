@@ -81,10 +81,10 @@ class OrderBikeWorkerTest {
     void completesTheJobWithTheOrderIdAsOutputVariable() {
         // given
         UUID id = UUID.randomUUID();
-        when(useCase.orderBike(ApplicationId.of(id.toString()))).thenReturn(new OrderId("ORDER-1"));
+        when(useCase.orderBike(ApplicationId.of(id.toString()), new BikeId("BIKE-900"))).thenReturn(new OrderId("ORDER-1"));
 
         // when
-        worker.handle(client, job, id.toString());
+        worker.handle(client, job, id.toString(), "BIKE-900");
 
         // then
         ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
@@ -100,10 +100,10 @@ class OrderBikeWorkerTest {
     void throwsTheBikeUnavailableBpmnErrorWhenTheDealerCannotDeliverTheBike() {
         // given
         UUID id = UUID.randomUUID();
-        when(useCase.orderBike(any())).thenThrow(new BikeUnavailableException(new BikeId("BIKE-OOS")));
+        when(useCase.orderBike(any(), any())).thenThrow(new BikeUnavailableException(new BikeId("BIKE-OOS")));
 
         // when
-        worker.handle(client, job, id.toString());
+        worker.handle(client, job, id.toString(), "BIKE-OOS");
 
         // then: the BPMN error is thrown and the job is neither completed nor failed
         verify(client).newThrowErrorCommand(job);
@@ -118,11 +118,11 @@ class OrderBikeWorkerTest {
     void failsTheJobWithABackoffWhenTheDealerOutageThrowsSoRetriesCountDownToAnIncident() {
         // given: the simulated dealer outage (BIKE-FAIL) propagates out of the use case
         UUID id = UUID.randomUUID();
-        when(useCase.orderBike(any())).thenThrow(new DealerUnavailableException(new BikeId("BIKE-FAIL")));
+        when(useCase.orderBike(any(), any())).thenThrow(new DealerUnavailableException(new BikeId("BIKE-FAIL")));
         when(job.getRetries()).thenReturn(3);
 
         // when
-        worker.handle(client, job, id.toString());
+        worker.handle(client, job, id.toString(), "BIKE-FAIL");
 
         // then: the job is failed (not completed) with one fewer retry, so Zeebe eventually raises an incident
         verify(client).newFailCommand(job);

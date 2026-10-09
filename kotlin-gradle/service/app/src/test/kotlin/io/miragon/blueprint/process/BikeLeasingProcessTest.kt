@@ -40,6 +40,7 @@ import io.miragon.common.test.assertions.hasCompletedElementsInOrder
 import io.miragon.common.test.config.TestProcessEngineConfiguration
 import io.mockk.every
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.BeforeEach
@@ -110,7 +111,7 @@ class BikeLeasingProcessTest {
 
     @BeforeEach
     fun setUp() {
-        every { orderBikeUseCase.orderBike(any()) } returns OrderId("ORDER-1")
+        every { orderBikeUseCase.orderBike(any(), any()) } returns OrderId("ORDER-1")
     }
 
     @Test
@@ -238,6 +239,7 @@ class BikeLeasingProcessTest {
         val (id, instanceKey) = submitUntilBikeUnavailable()
         val instance = ProcessInstanceSelectors.byKey(instanceKey)
         acceptAlternative()
+        CamundaAssert.assertThatProcessInstance(instance).hasVariable(FlowNodes.UserTaskClarifyAlternative.Variables.BIKE_ID.value, "BIKE-ALT")
 
         // re-order succeeds -> join -> handover -> withdrawal period
         process.correlateHandoverReported(id)
@@ -261,7 +263,10 @@ class BikeLeasingProcessTest {
                     .then { it.serviceTaskActivateLeasing }
                     .then { it.endEventLeasingActive },
             )
-        verify(exactly = 2) { orderBikeUseCase.orderBike(id) }
+        verifyOrder {
+            orderBikeUseCase.orderBike(id, BikeId("BIKE-TEST"))
+            orderBikeUseCase.orderBike(id, BikeId("BIKE-ALT"))
+        }
     }
 
     @Test
@@ -348,7 +353,7 @@ class BikeLeasingProcessTest {
 
     /** Drives a signed, insured application to the clarify-alternative task: the dealer has no bike. */
     private fun submitUntilBikeUnavailable(): Pair<ApplicationId, Long> {
-        every { orderBikeUseCase.orderBike(any()) } throws
+        every { orderBikeUseCase.orderBike(any(), any()) } throws
             BikeUnavailableException(BikeId("BIKE-TEST")) andThen OrderId("ORDER-2")
 
         val id = submit(age = 35, income = 3500.0)
@@ -366,7 +371,10 @@ class BikeLeasingProcessTest {
     private fun acceptAlternative() =
         processTestContext.completeUserTask(
             FlowNodes.UserTaskClarifyAlternative.ELEMENT_ID,
-            mapOf("alternativeFound" to true, "bikeId" to "BIKE-ALT"),
+            mapOf(
+                FlowNodes.UserTaskClarifyAlternative.Variables.ALTERNATIVE_FOUND.value to true,
+                FlowNodes.UserTaskClarifyAlternative.Variables.BIKE_ID.value to "BIKE-ALT",
+            ),
         )
 
     private fun orderCancellationsOf(processInstanceKey: Long): Int =

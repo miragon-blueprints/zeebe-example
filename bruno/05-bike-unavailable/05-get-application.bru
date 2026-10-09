@@ -17,4 +17,5 @@ script:pre-request {
 
 assert {
   res.status: eq 200
+  res.body.bikeId: eq BIKE-901
 }
