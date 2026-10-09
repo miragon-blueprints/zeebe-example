@@ -42,7 +42,7 @@ class OrderBikeServiceTest {
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when: the bike is ordered
-        OrderId orderId = underTest.orderBike(application.id());
+        OrderId orderId = underTest.orderBike(application.id(), application.bikeId());
 
         // then: the order id is returned and the application moves to ORDERED
         assertThat(orderId).isEqualTo(new OrderId("ORDER-900"));
@@ -50,6 +50,30 @@ class OrderBikeServiceTest {
         verify(bikeDealer).order(application.bikeId());
         verify(repository).save(argThat(it ->
             it.status() == LeasingStatus.ORDERED && new OrderId("ORDER-900").equals(it.orderId())));
+        verifyNoMoreInteractions(bikeDealer);
+    }
+
+    @Test
+    @DisplayName("orderBike orders the bike the process carries and stores it on the application")
+    void orderBikeOrdersTheBikeTheProcessCarriesAndStoresItOnTheApplication() {
+
+        // given: an application still pointing at the bike that was requested first
+        LeasingApplication application = testLeasingApplication().bikeId(new BikeId("BIKE-OOS")).build();
+        BikeId alternative = new BikeId("BIKE-ALT");
+        when(repository.findById(application.id())).thenReturn(Optional.of(application));
+        when(bikeDealer.checkAvailability(alternative)).thenReturn(true);
+        when(bikeDealer.order(alternative)).thenReturn(new OrderId("ORDER-ALT"));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when: the process asks for the alternative bike
+        OrderId orderId = underTest.orderBike(application.id(), alternative);
+
+        // then: the alternative is checked, ordered and stored together with the order
+        assertThat(orderId).isEqualTo(new OrderId("ORDER-ALT"));
+        verify(bikeDealer).checkAvailability(alternative);
+        verify(bikeDealer).order(alternative);
+        verify(repository).save(argThat(it ->
+            it.bikeId().equals(alternative) && new OrderId("ORDER-ALT").equals(it.orderId())));
         verifyNoMoreInteractions(bikeDealer);
     }
 
@@ -63,13 +87,31 @@ class OrderBikeServiceTest {
         when(bikeDealer.checkAvailability(application.bikeId())).thenReturn(false);
 
         // when / then: ordering reports the bike as unavailable and places no order
-        assertThatThrownBy(() -> underTest.orderBike(application.id()))
+        assertThatThrownBy(() -> underTest.orderBike(application.id(), application.bikeId()))
             .isInstanceOf(BikeUnavailableException.class)
             .hasMessage("Bike BIKE-OOS is not available at the dealer");
         verify(bikeDealer).checkAvailability(application.bikeId());
         verify(bikeDealer, never()).order(any());
-        verify(repository, never()).save(any());
+        verify(repository, never()).save(argThat(it -> it.orderId() != null));
         verifyNoMoreInteractions(bikeDealer);
+    }
+
+    @Test
+    @DisplayName("orderBike keeps an unavailable alternative on the application")
+    void orderBikeKeepsAnUnavailableAlternativeOnTheApplication() {
+
+        // given: an application whose alternative is out of stock as well
+        LeasingApplication application = testLeasingApplication().bikeId(new BikeId("BIKE-900")).build();
+        BikeId alternative = new BikeId("BIKE-OOS");
+        when(repository.findById(application.id())).thenReturn(Optional.of(application));
+        when(bikeDealer.checkAvailability(alternative)).thenReturn(false);
+
+        // when / then: the alternative is reported as unavailable, yet the application points at it
+        assertThatThrownBy(() -> underTest.orderBike(application.id(), alternative))
+            .isInstanceOf(BikeUnavailableException.class)
+            .hasMessage("Bike BIKE-OOS is not available at the dealer");
+        verify(repository).save(argThat(it -> it.bikeId().equals(alternative) && it.orderId() == null));
+        verify(bikeDealer, never()).order(any());
     }
 
     @Test
@@ -81,7 +123,7 @@ class OrderBikeServiceTest {
         when(repository.findById(id)).thenReturn(Optional.empty());
 
         // when / then: the lookup fails with an IllegalStateException, which the REST adapter maps to 404
-        assertThatThrownBy(() -> underTest.orderBike(id))
+        assertThatThrownBy(() -> underTest.orderBike(id, new BikeId("BIKE-900")))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Unknown application " + id);
         verify(repository, never()).save(any());

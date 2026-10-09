@@ -1,0 +1,37 @@
+meta {
+  name: Find the clarify-alternative task
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{camundaRest}}/user-tasks/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "processInstanceKey": "{{processInstanceKey}}",
+      "elementId": "userTask_clarifyAlternative",
+      "state": "CREATED"
+    }
+  }
+}
+
+script:pre-request {
+  await pollSearch("/user-tasks/search",
+    { filter: { processInstanceKey: bru.getVar("processInstanceKey"),
+      elementId: "userTask_clarifyAlternative", state: "CREATED" } },
+    (b) => b && Array.isArray(b.items) && b.items.length > 0 && b.items[0].userTaskKey != null);
+}
+
+assert {
+  res.status: eq 200
+  res.body.items[0].userTaskKey: isDefined
+}
+
+vars:post-response {
+  userTaskKey: res.body.items[0].userTaskKey
+}

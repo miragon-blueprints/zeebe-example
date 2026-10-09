@@ -2,6 +2,7 @@ package io.miragon.blueprint.process;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -48,6 +49,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -113,7 +115,7 @@ class BikeLeasingProcessTest {
 
     @BeforeEach
     void setUp() {
-        when(orderBikeUseCase.orderBike(any())).thenReturn(new OrderId("ORDER-1"));
+        when(orderBikeUseCase.orderBike(any(), any())).thenReturn(new OrderId("ORDER-1"));
     }
 
     @Test
@@ -242,6 +244,8 @@ class BikeLeasingProcessTest {
         ApplicationId id = submission.id();
         ProcessInstanceSelector instance = ProcessInstanceSelectors.byKey(submission.instanceKey());
         acceptAlternative();
+        CamundaAssert.assertThatProcessInstance(instance)
+            .hasVariable(FlowNodes.UserTaskClarifyAlternative.Variables.BIKE_ID.getValue(), "BIKE-ALT");
 
         // re-order succeeds -> join -> handover -> withdrawal period
         process.correlateHandoverReported(id);
@@ -264,7 +268,9 @@ class BikeLeasingProcessTest {
                         .then(n -> n.eventWithdrawalPeriodElapsed())
                         .then(n -> n.serviceTaskActivateLeasing())
                         .end(n -> n.endEventLeasingActive()).getIds());
-        verify(orderBikeUseCase, times(2)).orderBike(id);
+        InOrder orders = inOrder(orderBikeUseCase);
+        orders.verify(orderBikeUseCase).orderBike(id, new BikeId("BIKE-TEST"));
+        orders.verify(orderBikeUseCase).orderBike(id, new BikeId("BIKE-ALT"));
     }
 
     @Test
@@ -355,7 +361,7 @@ class BikeLeasingProcessTest {
 
     /** Drives a signed, insured application to the clarify-alternative task: the dealer has no bike. */
     private Submission submitUntilBikeUnavailable() {
-        when(orderBikeUseCase.orderBike(any()))
+        when(orderBikeUseCase.orderBike(any(), any()))
             .thenThrow(new BikeUnavailableException(new BikeId("BIKE-TEST")))
             .thenReturn(new OrderId("ORDER-2"));
 
@@ -374,7 +380,9 @@ class BikeLeasingProcessTest {
     private void acceptAlternative() {
         processTestContext.completeUserTask(
             FlowNodes.UserTaskClarifyAlternative.ELEMENT_ID,
-            Map.of("alternativeFound", true, "bikeId", "BIKE-ALT"));
+            Map.of(
+                FlowNodes.UserTaskClarifyAlternative.Variables.ALTERNATIVE_FOUND.getValue(), true,
+                FlowNodes.UserTaskClarifyAlternative.Variables.BIKE_ID.getValue(), "BIKE-ALT"));
     }
 
     private int orderCancellationsOf(long processInstanceKey) {

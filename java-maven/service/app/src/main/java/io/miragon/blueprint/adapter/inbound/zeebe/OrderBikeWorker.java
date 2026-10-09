@@ -8,6 +8,7 @@ import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNod
 import io.miragon.blueprint.adapter.process.Errors;
 import io.miragon.blueprint.adapter.process.ServiceTasks;
 import io.miragon.blueprint.application.port.inbound.OrderBikeUseCase;
+import io.miragon.blueprint.domain.bike.BikeId;
 import io.miragon.blueprint.domain.bike.BikeUnavailableException;
 import io.miragon.blueprint.domain.bike.OrderId;
 import io.miragon.blueprint.domain.leasing.ApplicationId;
@@ -38,9 +39,9 @@ public class OrderBikeWorker {
     }
 
     @JobWorker(type = ServiceTasks.MIRAVELO_ORDER_BIKE, autoComplete = false)
-    public void handle(JobClient client, ActivatedJob job, @Variable String applicationId) {
+    public void handle(JobClient client, ActivatedJob job, @Variable String applicationId, @Variable String bikeId) {
         try {
-            OrderId orderId = useCase.orderBike(ApplicationId.of(applicationId));
+            OrderId orderId = useCase.orderBike(ApplicationId.of(applicationId), new BikeId(bikeId));
             client.newCompleteCommand(job)
                 .variables(Map.of(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.getValue(), orderId.value()))
                 .send()

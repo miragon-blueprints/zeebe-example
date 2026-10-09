@@ -60,8 +60,7 @@ class LeasingProcessAdapter(
         val userTaskKey = findActiveClarifyAlternativeTask(id)
         val variables = buildMap<String, Any> {
             put(FlowNodes.UserTaskClarifyAlternative.Variables.ALTERNATIVE_FOUND.value, alternativeFound)
-            // The re-order reads the same start-injected bike variable, so reuse its name.
-            bikeId?.let { put(FlowNodes.StartEventLeasingRequestReceived.Variables.BIKE_ID.value, it.value) }
+            bikeId?.let { put(FlowNodes.UserTaskClarifyAlternative.Variables.BIKE_ID.value, it.value) }
         }
         camundaClient.newCompleteUserTaskCommand(userTaskKey).variables(variables).send().join()
     }

@@ -18,7 +18,8 @@ npx --yes @usebruno/cli@4.0.0 run . --env local -r
 | `06-incident-demo` | a failing job runs out of retries and raises an incident |
 | `07-list-and-inbox` | the list and task-inbox endpoints |
 | `08-alternative-declined` | the bike is out of stock and no alternative is found; contract and policy are compensated, no order is cancelled |
-| `09-invalid-request` | a request without income is refused with a 400 before any process starts |
+| `09-invalid-request` | invalid input is refused with a 400: a request without income, an accepted alternative without a bike |
+| `10-alternative-via-tasklist` | the bike is out of stock and the alternative is chosen the way the Tasklist form does it |
 
 A running Zeebe broker cannot fast-forward timers over REST, so the timer-gated steps — the signature
 deadline and the 14-day withdrawal period that ends in an active lease — are covered by the process
@@ -48,8 +49,10 @@ alternative-clarification task, never exposing a raw task id). The full contract
 If the requested bike is out of stock (`bikeId: "BIKE-OOS"`), the `Clarify alternative with customer`
 user task shows a deliberate contrast:
 
-- **Recommended:** a client calls `POST /api/bike-leasing/{id}/clarify-alternative`, which routes through
-  the domain (persisting the chosen alternative) *before* completing the task.
+- **Reaches the domain either way:** a client calls `POST /api/bike-leasing/{id}/clarify-alternative`, or
+  a human completes the Camunda Form in the Tasklist. Both hand the chosen `bikeId` to the process, and
+  the re-order reads it and persists it on the application. The REST call additionally registers the
+  bike's model in the portfolio.
 - **Counter-example:** `clarify-return` in `cancel-bike-order.bpmn` is completed via the Camunda Form or
   the Camunda 8 REST API only. It never touches the domain, so its data lands only in process variables
   (see the `bpmn:documentation` on each task).
