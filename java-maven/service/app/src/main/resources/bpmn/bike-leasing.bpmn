@@ -148,7 +148,7 @@
       <bpmn:outgoing>flow_joinToHandover</bpmn:outgoing>
     </bpmn:parallelGateway>
     <bpmn:userTask id="userTask_clarifyAlternative" name="Clarify alternative with customer">
-      <bpmn:documentation>Completable two ways: a human via the deployed Camunda Form (Tasklist), or a client via POST /api/bike-leasing/{id}/clarify-alternative. Both paths hand the chosen alternative to the process as the bikeId variable, which the re-order reads and persists on the aggregate, so the captured data reaches the domain model either way. The REST path additionally registers the bike's model in the portfolio. See "Clarify return with supplier" in cancel-bike-order.bpmn for the form-only anti-pattern where data never leaves the process.</bpmn:documentation>
+      <bpmn:documentation>Completable two ways: a human via the deployed Camunda Form (Tasklist), or a client via POST /api/bike-leasing/{id}/clarify-alternative. Both paths hand the chosen alternative to the process as the bikeId variable, which the re-order reads and persists on the aggregate, so the captured data reaches the domain model either way. The REST path additionally registers the bike's model in the portfolio. Confirming an alternative without naming another bike orders the originally requested one again, which covers the case that it is back in stock by the time of the clarification. See "Clarify return with supplier" in cancel-bike-order.bpmn for the form-only anti-pattern where data never leaves the process.</bpmn:documentation>
       <bpmn:extensionElements>
         <zeebe:userTask />
         <!-- The Camunda Form still renders in the Tasklist for the human completion path. -->
