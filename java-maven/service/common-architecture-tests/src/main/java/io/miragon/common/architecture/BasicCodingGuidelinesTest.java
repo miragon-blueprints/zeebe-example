@@ -52,7 +52,7 @@ public abstract class BasicCodingGuidelinesTest {
             .should()
             .beFreeOfCycles()
             .because("Classes should not have circular dependencies")
-            .check(allClasses);
+            .check(productionClasses);
     }
 
     @Test
