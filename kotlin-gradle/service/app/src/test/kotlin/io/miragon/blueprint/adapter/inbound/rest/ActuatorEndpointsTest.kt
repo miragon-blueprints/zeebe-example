@@ -1,4 +1,4 @@
-package io.miragon.blueprint.actuator
+package io.miragon.blueprint.adapter.inbound.rest
 
 import io.camunda.client.CamundaClient
 import io.mockk.mockk
@@ -18,7 +18,7 @@ import java.net.http.HttpResponse
  * Smoke-tests the operational surface: the actuator probes and the Prometheus scrape endpoint must
  * respond so orchestrators (liveness/readiness) and monitoring can rely on them.
  *
- * Boots a full servlet context the same way [io.miragon.blueprint.openapi.OpenApiSpecExportTest]
+ * Boots a full servlet context the same way [OpenApiSpecExportTest]
  * does — the `test` profile is `web-application-type=none`, so we override it to `servlet`, exclude
  * the Zeebe client autoconfiguration (no broker needed for the ops surface), and let the H2 datasource
  * back the built-in `db` health indicator (which reports `UP`).

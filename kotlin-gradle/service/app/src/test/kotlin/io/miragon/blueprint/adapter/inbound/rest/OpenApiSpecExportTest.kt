@@ -1,4 +1,4 @@
-package io.miragon.blueprint.openapi
+package io.miragon.blueprint.adapter.inbound.rest
 
 import io.camunda.client.CamundaClient
 import io.mockk.mockk
