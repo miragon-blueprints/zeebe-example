@@ -15,6 +15,7 @@ repositories {
 dependencies {
     implementation(libs.zeebeSdk)
     api(libs.bpmnToCodeRuntime)
+    implementation(libs.spring.tx)
     implementation(libs.kotlin.logging)
     testImplementation(libs.bundles.test)
     testRuntimeOnly(libs.junitPlatformLauncher)

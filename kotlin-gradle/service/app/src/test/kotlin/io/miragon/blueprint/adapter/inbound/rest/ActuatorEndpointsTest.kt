@@ -1,6 +1,7 @@
 package io.miragon.blueprint.adapter.inbound.rest
 
 import io.camunda.client.CamundaClient
+import io.camunda.client.api.JsonMapper
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -37,6 +38,9 @@ class ActuatorEndpointsTest {
     class MockEngineConfiguration {
         @Bean
         fun camundaClient(): CamundaClient = mockk(relaxed = true)
+
+        @Bean
+        fun camundaJsonMapper(): JsonMapper = mockk(relaxed = true)
     }
 
     @Value("\${local.server.port}")

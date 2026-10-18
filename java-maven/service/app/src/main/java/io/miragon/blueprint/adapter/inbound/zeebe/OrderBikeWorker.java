@@ -4,6 +4,8 @@ import io.camunda.client.annotation.JobWorker;
 import io.camunda.client.annotation.Variable;
 import io.camunda.client.api.response.ActivatedJob;
 import io.camunda.client.api.worker.JobClient;
+import io.camunda.client.exception.BpmnError;
+import io.camunda.client.exception.CamundaError;
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes;
 import io.miragon.blueprint.adapter.process.Errors;
 import io.miragon.blueprint.adapter.process.ServiceTasks;
@@ -12,6 +14,7 @@ import io.miragon.blueprint.domain.bike.BikeId;
 import io.miragon.blueprint.domain.bike.BikeUnavailableException;
 import io.miragon.blueprint.domain.bike.OrderId;
 import io.miragon.blueprint.domain.leasing.ApplicationId;
+import io.miragon.common.zeebe.idempotency.IdempotentJobExecutor;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -32,25 +35,27 @@ public class OrderBikeWorker {
 
     private final OrderBikeUseCase useCase;
 
+    private final IdempotentJobExecutor idempotentJobs;
+
     private final Duration retryBackoff = Duration.ofSeconds(10);
 
-    public OrderBikeWorker(OrderBikeUseCase useCase) {
+    public OrderBikeWorker(OrderBikeUseCase useCase, IdempotentJobExecutor idempotentJobs) {
         this.useCase = useCase;
+        this.idempotentJobs = idempotentJobs;
     }
 
     @JobWorker(type = ServiceTasks.MIRAVELO_ORDER_BIKE, autoComplete = false)
     public void handle(JobClient client, ActivatedJob job, @Variable String applicationId, @Variable String bikeId) {
         try {
-            OrderId orderId = useCase.orderBike(ApplicationId.of(applicationId), new BikeId(bikeId));
+            Map<String, Object> variables = idempotentJobs.runOnceWithVariables(job, () -> orderBike(applicationId, bikeId));
             client.newCompleteCommand(job)
-                .variables(Map.of(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.getValue(), orderId.value()))
+                .variables(variables)
                 .send()
                 .join();
-        } catch (BikeUnavailableException e) {
-            // Leaving the task through the error boundary event registers no order compensation.
+        } catch (BpmnError e) {
             client.newThrowErrorCommand(job)
-                .errorCode(Errors.BIKE_UNAVAILABLE.getCode())
-                .errorMessage(e.getMessage())
+                .errorCode(e.getErrorCode())
+                .errorMessage(e.getErrorMessage())
                 .send()
                 .join();
         } catch (RuntimeException e) {
@@ -62,6 +67,16 @@ public class OrderBikeWorker {
                 .errorMessage(e.getMessage())
                 .send()
                 .join();
+        }
+    }
+
+    private Map<String, Object> orderBike(String applicationId, String bikeId) {
+        try {
+            OrderId orderId = useCase.orderBike(ApplicationId.of(applicationId), new BikeId(bikeId));
+            return Map.of(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.getValue(), orderId.value());
+        } catch (BikeUnavailableException e) {
+            // Leaving the task through the error boundary event registers no order compensation.
+            throw CamundaError.bpmnError(Errors.BIKE_UNAVAILABLE.getCode(), e.getMessage());
         }
     }
 }

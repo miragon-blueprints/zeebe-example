@@ -1,11 +1,13 @@
 package io.miragon.blueprint.adapter.inbound.zeebe;
 
+import static io.miragon.blueprint.adapter.inbound.zeebe.InMemoryProcessedJobStore.inMemoryIdempotentJobExecutor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +39,7 @@ class OrderBikeWorkerTest {
 
     private final OrderBikeUseCase useCase = mock(OrderBikeUseCase.class);
 
-    private final OrderBikeWorker worker = new OrderBikeWorker(useCase);
+    private final OrderBikeWorker worker = new OrderBikeWorker(useCase, inMemoryIdempotentJobExecutor());
 
     private final JobClient client = mock(JobClient.class);
 
@@ -62,6 +64,7 @@ class OrderBikeWorkerTest {
 
     @BeforeEach
     void stubCommandChains() {
+        when(job.getKey()).thenReturn(1L);
         when(client.newCompleteCommand(job)).thenReturn(completeCommand);
         when(completeCommand.variables(anyMap())).thenReturn(completeCommand);
         when(completeCommand.send()).thenReturn(completeResponse);
@@ -129,5 +132,57 @@ class OrderBikeWorkerTest {
         verify(failCommand).retries(2);
         verify(client, never()).newCompleteCommand(any(ActivatedJob.class));
         verify(client, never()).newThrowErrorCommand(any(ActivatedJob.class));
+    }
+
+    @Test
+    @DisplayName("completes a repeated delivery of the same job with the first order id without ordering again")
+    void completesARepeatedDeliveryOfTheSameJobWithTheFirstOrderIdWithoutOrderingAgain() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(useCase.orderBike(any(), any())).thenReturn(new OrderId("ORDER-1"), new OrderId("ORDER-2"));
+        worker.handle(client, job, id.toString(), "BIKE-900");
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-900");
+
+        // then
+        verify(completeCommand, times(2)).variables(Map.of("orderId", "ORDER-1"));
+        verify(useCase, times(1)).orderBike(any(), any());
+    }
+
+    @Test
+    @DisplayName("throws the recorded BPMN error again on a repeated delivery of the same job without ordering again")
+    void throwsTheRecordedBpmnErrorAgainOnARepeatedDeliveryOfTheSameJobWithoutOrderingAgain() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(useCase.orderBike(any(), any())).thenThrow(new BikeUnavailableException(new BikeId("BIKE-OOS")));
+        worker.handle(client, job, id.toString(), "BIKE-OOS");
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-OOS");
+
+        // then
+        verify(throwErrorCommand, times(2)).errorCode("bikeUnavailable");
+        verify(throwErrorCommandStep2, times(2)).errorMessage("Bike BIKE-OOS is not available at the dealer");
+        verify(useCase, times(1)).orderBike(any(), any());
+    }
+
+    @Test
+    @DisplayName("orders again on a retry after the dealer outage because a failed attempt is not recorded")
+    void ordersAgainOnARetryAfterTheDealerOutageBecauseAFailedAttemptIsNotRecorded() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(job.getRetries()).thenReturn(3);
+        when(useCase.orderBike(any(), any()))
+            .thenThrow(new DealerUnavailableException(new BikeId("BIKE-FAIL")))
+            .thenReturn(new OrderId("ORDER-1"));
+        worker.handle(client, job, id.toString(), "BIKE-FAIL");
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-FAIL");
+
+        // then
+        verify(completeCommand).variables(Map.of("orderId", "ORDER-1"));
+        verify(useCase, times(2)).orderBike(any(), any());
     }
 }

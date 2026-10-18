@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import io.camunda.client.CamundaClient;
+import io.camunda.client.api.JsonMapper;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -41,6 +42,11 @@ class ActuatorEndpointsTest {
         @Bean
         CamundaClient camundaClient() {
             return mock(CamundaClient.class);
+        }
+
+        @Bean
+        JsonMapper camundaJsonMapper() {
+            return mock(JsonMapper.class);
         }
     }
 

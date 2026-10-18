@@ -29,6 +29,7 @@ copied from [`adr/0000-adr-template.md`](adr/0000-adr-template.md).
 | [0010](adr/0010-flyway-for-database-migrations.md) | Flyway for versioned schema migrations; Hibernate switches to `validate`. |
 | [0011](adr/0011-build-and-deployment-approach.md) | Build & deployment: `bootBuildImage` OCI image via buildpacks. |
 | [0013](adr/0013-two-stack-variants-side-by-side-on-main.md) | Kotlin + Gradle (recommended) and Java + Maven side by side on `main`, each self-contained. |
+| [0014](adr/0014-idempotent-job-workers.md) | Idempotent job workers: each job key runs once, a repeated delivery replays the recorded outcome. |
 
 ## Diagrams
 

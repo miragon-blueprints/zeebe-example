@@ -6,6 +6,7 @@ import io.camunda.process.test.api.CamundaAssert
 import io.camunda.process.test.api.CamundaProcessTestContext
 import io.camunda.process.test.api.CamundaSpringProcessTest
 import io.camunda.process.test.api.assertions.ProcessInstanceSelectors
+import io.miragon.blueprint.adapter.outbound.db.ProcessedJobJpaRepository
 import io.miragon.blueprint.adapter.outbound.zeebe.LeasingProcessAdapter
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
 import io.miragon.blueprint.application.port.inbound.ActivateLeasingUseCase
@@ -74,6 +75,9 @@ class BikeLeasingProcessTest {
     @Autowired
     private lateinit var process: LeasingProcessAdapter
 
+    @Autowired
+    private lateinit var processedJobs: ProcessedJobJpaRepository
+
     @MockkBean(relaxed = true)
     private lateinit var rejectApplicationUseCase: RejectApplicationUseCase
 
@@ -109,6 +113,7 @@ class BikeLeasingProcessTest {
 
     @BeforeEach
     fun setUp() {
+        processedJobs.deleteAll()
         every { orderBikeUseCase.orderBike(any(), any()) } returns OrderId("ORDER-1")
     }
 

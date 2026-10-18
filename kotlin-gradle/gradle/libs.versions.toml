@@ -26,6 +26,7 @@ postgres = { module = "org.postgresql:postgresql", version.ref = "postgres_versi
 flyway = { module = "org.springframework.boot:spring-boot-starter-flyway", version.ref = "spring_version" }
 flyway-postgres = { module = "org.flywaydb:flyway-database-postgresql" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin_version" }
+spring-tx = { module = "org.springframework:spring-tx" }   # version pinned by the Spring Boot BOM
 kotlin_logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin_logging_version" }
 jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 
