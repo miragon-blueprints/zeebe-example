@@ -1,6 +1,7 @@
 package io.miragon.blueprint.adapter.inbound.rest
 
 import io.camunda.client.CamundaClient
+import io.camunda.client.api.JsonMapper as CamundaJsonMapper
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -50,6 +51,9 @@ class OpenApiSpecExportTest {
     class MockEngineConfiguration {
         @Bean
         fun camundaClient(): CamundaClient = mockk(relaxed = true)
+
+        @Bean
+        fun camundaJsonMapper(): CamundaJsonMapper = mockk(relaxed = true)
     }
 
     @Value("\${local.server.port}")
