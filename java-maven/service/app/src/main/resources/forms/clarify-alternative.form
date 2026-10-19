@@ -33,6 +33,6 @@
   "type": "default",
   "id": "clarifyAlternativeForm",
   "executionPlatform": "Camunda Cloud",
-  "executionPlatformVersion": "8.9.0",
+  "executionPlatformVersion": "8.10.0",
   "schemaVersion": 16
 }

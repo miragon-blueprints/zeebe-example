@@ -36,7 +36,7 @@
         <java.version>21</java.version>
 
         <!-- Camunda 8 / Zeebe -->
-        <camunda.version>8.9.21</camunda.version>
+        <camunda.version>8.10.5</camunda.version>
 
         <!-- BPMN-to-code (typed process API generation, runtime and model validation) -->
         <bpmn-to-code.version>6.2.0</bpmn-to-code.version>

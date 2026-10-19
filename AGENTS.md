@@ -8,7 +8,7 @@ imports it.
 A headless **MiraVelo bike-leasing** example: the same BPMN process the sibling engine blueprints
 implement, on Camunda 8 / Zeebe, with an enforced hexagonal architecture and a REST API — no frontend.
 
-- **Backend** — Spring Boot 4, hexagonal, Camunda 8 / Zeebe 8.9 engine driven by **job workers**
+- **Backend** — Spring Boot 4, hexagonal, Camunda 8 / Zeebe 8.10 engine driven by **job workers**
   (`@JobWorker`). Package root `io.miragon.blueprint`.
   <!-- variant:blueprint -->
 - **Two equivalent variants on `main`** — `kotlin-gradle/` (Kotlin, **the recommended stack**) and
@@ -161,7 +161,7 @@ source-level tool for the rules bytecode cannot express) and **fail the build**.
 - Since bpmn-to-code 6 the API is node-centric: `<Process>ProcessApi.FlowNodes.<Node>` carries the
   element (`.id`, `ELEMENT_ID`), its `Variables` and its successors (`Next`). Process tests assert
   the walked path as a compile-checked path instead of hand-maintained element-id lists.
-- `bpmnlint` (`bpmnlint:recommended` + `camunda-compat/camunda-cloud-8-9` + `@miragon/rules/all`)
+- `bpmnlint` (`bpmnlint:recommended` + `camunda-compat/camunda-cloud-8-10` + `@miragon/rules/all`)
   runs on staged `.bpmn` via `.githooks/pre-commit` (install: `npm run hooks:install`). Element ids
   follow the `flow_`/`event_`/`gateway_`/`serviceTask_` conventions the rules enforce.
 
