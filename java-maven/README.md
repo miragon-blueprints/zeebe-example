@@ -1,6 +1,6 @@
 # Java + Maven variant
 
-The bike-leasing service in **Java 21**, built with **Maven**, on Spring Boot 4 and Camunda 8.9 (Zeebe,
+The bike-leasing service in **Java 21**, built with **Maven**, on Spring Boot 4 and Camunda 8.10 (Zeebe,
 self-managed). It is the stack most enterprise teams and our trainings use, and needs no Kotlin or
 Gradle knowledge.
 

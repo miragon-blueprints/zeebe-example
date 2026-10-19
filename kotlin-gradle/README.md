@@ -1,7 +1,7 @@
 # Kotlin + Gradle variant
 
 The bike-leasing service in **Kotlin 2.4**, built with **Gradle** and a `libs.versions.toml` version
-catalog, on Spring Boot 4 and Camunda 8.9 (Zeebe, self-managed).
+catalog, on Spring Boot 4 and Camunda 8.10 (Zeebe, self-managed).
 
 <!-- variant:blueprint -->
 > [!TIP]

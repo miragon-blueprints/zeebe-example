@@ -1,7 +1,7 @@
 {
   "extends": [
     "bpmnlint:recommended",
-    "plugin:camunda-compat/camunda-cloud-8-9",
+    "plugin:camunda-compat/camunda-cloud-8-10",
     "plugin:@miragon/rules/all"
   ],
   "moddleExtensions": {
