@@ -3,10 +3,6 @@
 
 package io.miragon.blueprint.adapter.process
 
-import kotlin.String
-import kotlin.Suppress
-import kotlin.collections.List
-
 /**
  * Job worker task types used in `@JobWorker(type = ServiceTasks.X)` annotations.
  * Kept as `const val String` because annotation arguments must be compile-time constants.
@@ -26,8 +22,7 @@ object ServiceTasks {
 
   const val MIRAVELO_REQUEST_CANCELLATION: String = "miravelo.requestCancellation"
 
-  const val MIRAVELO_SEND_CANCELLATION_CONFIRMATION: String =
-      "miravelo.sendCancellationConfirmation"
+  const val MIRAVELO_SEND_CANCELLATION_CONFIRMATION: String = "miravelo.sendCancellationConfirmation"
 
   const val MIRAVELO_SEND_CONTRACT: String = "miravelo.sendContract"
 
