@@ -4,6 +4,7 @@ import io.camunda.client.CamundaClient;
 import io.camunda.client.api.search.enums.UserTaskState;
 import io.camunda.client.api.search.response.UserTask;
 import io.camunda.client.api.search.response.Variable;
+import io.miragon.blueprint.adapter.outbound.db.ProcessMessageOutboxPersistenceAdapter;
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes;
 import io.miragon.blueprint.adapter.process.Messages;
 import io.miragon.blueprint.application.port.outbound.LeasingProcess;
@@ -11,7 +12,6 @@ import io.miragon.blueprint.domain.bike.BikeId;
 import io.miragon.blueprint.domain.leasing.ApplicationId;
 import io.miragon.blueprint.domain.leasing.LeasingApplication;
 import io.miragon.bpmn.runtime.VariableName;
-import io.miragon.common.zeebe.engine.ProcessEngineApi;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,19 +22,19 @@ import org.springframework.stereotype.Component;
 /**
  * Drives the Camunda 8 / Zeebe engine. Zeebe has no business key, so the application id travels as a
  * process variable and is declared as the message subscription correlation key on every catch event;
- * messages are published with that id as their correlation key, and the user task is looked up by its
+ * messages are written to the outbox with that id as their correlation key, and the user task is looked up by its
  * element id plus the instance's {@code applicationId} variable. The variable and element names come from
  * the typed process API generated from {@code bike-leasing.bpmn}.
  */
 @Component
 public class LeasingProcessAdapter implements LeasingProcess {
 
-    private final ProcessEngineApi engineApi;
+    private final ProcessMessageOutboxPersistenceAdapter outbox;
 
     private final CamundaClient camundaClient;
 
-    public LeasingProcessAdapter(ProcessEngineApi engineApi, CamundaClient camundaClient) {
-        this.engineApi = engineApi;
+    public LeasingProcessAdapter(ProcessMessageOutboxPersistenceAdapter outbox, CamundaClient camundaClient) {
+        this.outbox = outbox;
         this.camundaClient = camundaClient;
     }
 
@@ -46,22 +46,22 @@ public class LeasingProcessAdapter implements LeasingProcess {
         variables.put(FlowNodes.StartEventLeasingRequestReceived.Variables.MONTHLY_NET_INCOME, application.monthlyNetIncome());
         variables.put(FlowNodes.StartEventLeasingRequestReceived.Variables.AGE, application.age());
         // Publishing the leasing-request message starts a new instance via the message start event.
-        engineApi.sendMessage(Messages.MIRAVELO_LEASING_REQUEST_RECEIVED, application.id().value().toString(), variables);
+        outbox.add(Messages.MIRAVELO_LEASING_REQUEST_RECEIVED, application.id().value().toString(), variables);
     }
 
     @Override
     public void correlateContractSigned(ApplicationId id) {
-        engineApi.sendMessage(Messages.MIRAVELO_CONTRACT_SIGNED, id.value().toString());
+        outbox.add(Messages.MIRAVELO_CONTRACT_SIGNED, id.value().toString());
     }
 
     @Override
     public void correlateHandoverReported(ApplicationId id) {
-        engineApi.sendMessage(Messages.MIRAVELO_HANDOVER_REPORTED, id.value().toString());
+        outbox.add(Messages.MIRAVELO_HANDOVER_REPORTED, id.value().toString());
     }
 
     @Override
     public void correlateApplicationWithdrawn(ApplicationId id) {
-        engineApi.sendMessage(Messages.MIRAVELO_APPLICATION_WITHDRAWN, id.value().toString());
+        outbox.add(Messages.MIRAVELO_APPLICATION_WITHDRAWN, id.value().toString());
     }
 
     /**

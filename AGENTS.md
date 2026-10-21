@@ -46,8 +46,8 @@ service/
   app/                         the Camunda 8 bike-leasing service (hexagonal)
     adapter/inbound/rest        domain REST controllers + OpenAPI / CORS / problem-details config
     adapter/inbound/zeebe       @JobWorker handlers for the BPMN service tasks
-    adapter/outbound/zeebe      drives the engine (ProcessEngineApi / CamundaClient) + task inbox
-    adapter/outbound/db         JPA persistence (leasing applications + bike portfolio)
+    adapter/outbound/zeebe      drives the engine (CamundaClient, message outbox relay) + task inbox
+    adapter/outbound/db         JPA persistence (leasing applications, bike portfolio, process message outbox)
     adapter/outbound/…          simulated dealer / contract / insurance / notification adapters
     adapter/process             generated *ProcessApi + shared constants (bpmn-to-code)
     application/{port,service}  use-case ports and their services

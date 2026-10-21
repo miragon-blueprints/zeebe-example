@@ -54,6 +54,11 @@ class OpenApiSpecExportTest {
         CamundaClient camundaClient() {
             return mock(CamundaClient.class);
         }
+
+        @Bean
+        io.camunda.client.api.JsonMapper camundaJsonMapper() {
+            return mock(io.camunda.client.api.JsonMapper.class);
+        }
     }
 
     @Value("${local.server.port}")

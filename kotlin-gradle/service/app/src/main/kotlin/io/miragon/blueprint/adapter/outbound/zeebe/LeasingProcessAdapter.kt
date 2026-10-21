@@ -2,34 +2,34 @@ package io.miragon.blueprint.adapter.outbound.zeebe
 
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.search.enums.UserTaskState
+import io.miragon.blueprint.adapter.outbound.db.ProcessMessageOutboxPersistenceAdapter
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
 import io.miragon.blueprint.adapter.process.Messages
 import io.miragon.blueprint.application.port.outbound.LeasingProcess
 import io.miragon.blueprint.domain.bike.BikeId
 import io.miragon.blueprint.domain.leasing.ApplicationId
 import io.miragon.blueprint.domain.leasing.LeasingApplication
-import io.miragon.common.zeebe.engine.ProcessEngineApi
 import org.springframework.stereotype.Component
 
 /**
  * Drives the Camunda 8 / Zeebe engine. Zeebe has no business key, so the application id travels as a
  * process variable and is declared as the message subscription correlation key on every catch event;
- * messages are published with that id as their correlation key, and the user task is looked up by its
+ * messages are written to the outbox with that id as their correlation key, and the user task is looked up by its
  * element id plus the instance's `applicationId` variable. The variable and element names come from
  * the typed process API generated from `bike-leasing.bpmn`.
  */
 @Component
 class LeasingProcessAdapter(
-    private val engineApi: ProcessEngineApi,
+    private val outbox: ProcessMessageOutboxPersistenceAdapter,
     private val camundaClient: CamundaClient,
 ) : LeasingProcess {
 
     override fun submitRequest(application: LeasingApplication) {
         val start = FlowNodes.StartEventLeasingRequestReceived.Variables
         // Publishing the leasing-request message starts a new instance via the message start event.
-        engineApi.sendMessage(
+        outbox.add(
             messageName = Messages.MIRAVELO_LEASING_REQUEST_RECEIVED,
-            correlationId = application.id.value.toString(),
+            correlationKey = application.id.value.toString(),
             variables = mapOf(
                 start.APPLICATION_ID to application.id.value.toString(),
                 start.BIKE_ID to application.bikeId.value,
@@ -40,13 +40,13 @@ class LeasingProcessAdapter(
     }
 
     override fun correlateContractSigned(id: ApplicationId) =
-        engineApi.sendMessage(Messages.MIRAVELO_CONTRACT_SIGNED, id.value.toString())
+        outbox.add(Messages.MIRAVELO_CONTRACT_SIGNED, id.value.toString())
 
     override fun correlateHandoverReported(id: ApplicationId) =
-        engineApi.sendMessage(Messages.MIRAVELO_HANDOVER_REPORTED, id.value.toString())
+        outbox.add(Messages.MIRAVELO_HANDOVER_REPORTED, id.value.toString())
 
     override fun correlateApplicationWithdrawn(id: ApplicationId) =
-        engineApi.sendMessage(Messages.MIRAVELO_APPLICATION_WITHDRAWN, id.value.toString())
+        outbox.add(Messages.MIRAVELO_APPLICATION_WITHDRAWN, id.value.toString())
 
     /**
      * Completes the `Clarify alternative with customer` user task via the Camunda client — the same

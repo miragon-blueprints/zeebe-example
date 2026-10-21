@@ -3,9 +3,11 @@ package io.miragon.blueprint
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
+import org.springframework.scheduling.annotation.EnableScheduling
 import java.time.Clock
 
 @SpringBootApplication
+@EnableScheduling
 class BikeLeasingApplication {
 
     /** Single source of "now" for the app, so time-dependent logic can be pinned in tests. */
