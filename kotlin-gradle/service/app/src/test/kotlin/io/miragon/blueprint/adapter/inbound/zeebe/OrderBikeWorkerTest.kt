@@ -19,9 +19,9 @@ import java.util.UUID
 class OrderBikeWorkerTest {
 
     private val useCase = mockk<OrderBikeUseCase>()
-    private val worker = OrderBikeWorker(useCase)
+    private val worker = OrderBikeWorker(useCase, inMemoryIdempotentJobExecutor())
     private val client = mockk<JobClient>(relaxed = true)
-    private val job = mockk<ActivatedJob>(relaxed = true)
+    private val job = mockk<ActivatedJob>(relaxed = true) { every { key } returns 1L }
 
     @Test
     fun `completes the job with the order id as output variable`() {
@@ -73,5 +73,55 @@ class OrderBikeWorkerTest {
         verify { client.newFailCommand(job).retries(2) }
         verify(exactly = 0) { client.newCompleteCommand(any<ActivatedJob>()) }
         verify(exactly = 0) { client.newThrowErrorCommand(any<ActivatedJob>()) }
+    }
+
+    @Test
+    fun `completes a repeated delivery of the same job with the first order id without ordering again`() {
+        // given
+        val id = UUID.randomUUID()
+        every { useCase.orderBike(any(), any()) } returnsMany listOf(OrderId("ORDER-1"), OrderId("ORDER-2"))
+        worker.handle(client, job, id.toString(), "BIKE-900")
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-900")
+
+        // then
+        verify(exactly = 2) { client.newCompleteCommand(job).variables(mapOf("orderId" to "ORDER-1")) }
+        verify(exactly = 1) { useCase.orderBike(any(), any()) }
+    }
+
+    @Test
+    fun `throws the recorded BPMN error again on a repeated delivery of the same job without ordering again`() {
+        // given
+        val id = UUID.randomUUID()
+        every { useCase.orderBike(any(), any()) } throws BikeUnavailableException(BikeId("BIKE-OOS"))
+        worker.handle(client, job, id.toString(), "BIKE-OOS")
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-OOS")
+
+        // then
+        verify(exactly = 2) {
+            client.newThrowErrorCommand(job)
+                .errorCode("bikeUnavailable")
+                .errorMessage("Bike BIKE-OOS is not available at the dealer")
+        }
+        verify(exactly = 1) { useCase.orderBike(any(), any()) }
+    }
+
+    @Test
+    fun `orders again on a retry after the dealer outage because a failed attempt is not recorded`() {
+        // given
+        val id = UUID.randomUUID()
+        every { job.retries } returns 3
+        every { useCase.orderBike(any(), any()) } throws DealerUnavailableException(BikeId("BIKE-FAIL")) andThen OrderId("ORDER-1")
+        worker.handle(client, job, id.toString(), "BIKE-FAIL")
+
+        // when
+        worker.handle(client, job, id.toString(), "BIKE-FAIL")
+
+        // then
+        verify { client.newCompleteCommand(job).variables(mapOf("orderId" to "ORDER-1")) }
+        verify(exactly = 2) { useCase.orderBike(any(), any()) }
     }
 }

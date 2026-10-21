@@ -41,11 +41,11 @@ The service:
 ```
 service/
   common-architecture-tests/   reusable architecture rule suite
-  common-zeebe/                Zeebe glue: ProcessEngineApi, BPMN auto-deploy, connection config
+  common-zeebe/                Zeebe glue: ProcessEngineApi, IdempotentJobExecutor, BPMN auto-deploy, connection config
   common-zeebe-test/           camunda-process-test helpers
   app/                         the Camunda 8 bike-leasing service (hexagonal)
     adapter/inbound/rest        domain REST controllers + OpenAPI / CORS / problem-details config
-    adapter/inbound/zeebe       @JobWorker handlers for the BPMN service tasks
+    adapter/inbound/zeebe       @JobWorker handlers; side effects run once per job key (ADR-0014)
     adapter/outbound/zeebe      drives the engine (ProcessEngineApi / CamundaClient) + task inbox
     adapter/outbound/db         JPA persistence (leasing applications + bike portfolio)
     adapter/outbound/…          simulated dealer / contract / insurance / notification adapters

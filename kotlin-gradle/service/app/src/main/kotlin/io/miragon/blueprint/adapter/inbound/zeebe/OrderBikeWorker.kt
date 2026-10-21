@@ -4,6 +4,8 @@ import io.camunda.client.annotation.JobWorker
 import io.camunda.client.annotation.Variable
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.worker.JobClient
+import io.camunda.client.exception.BpmnError
+import io.camunda.client.exception.CamundaError
 import io.miragon.blueprint.adapter.process.BikeLeasingProcessProcessApi.FlowNodes
 import io.miragon.blueprint.adapter.process.Errors
 import io.miragon.blueprint.adapter.process.ServiceTasks
@@ -11,6 +13,7 @@ import io.miragon.blueprint.application.port.inbound.OrderBikeUseCase
 import io.miragon.blueprint.domain.bike.BikeId
 import io.miragon.blueprint.domain.bike.BikeUnavailableException
 import io.miragon.blueprint.domain.leasing.ApplicationId
+import io.miragon.common.zeebe.idempotency.IdempotentJobExecutor
 import org.springframework.stereotype.Component
 import java.time.Duration
 
@@ -28,6 +31,7 @@ import java.time.Duration
 @Component
 class OrderBikeWorker(
     private val useCase: OrderBikeUseCase,
+    private val idempotentJobs: IdempotentJobExecutor,
 ) {
 
     private val retryBackoff: Duration = Duration.ofSeconds(10)
@@ -35,16 +39,15 @@ class OrderBikeWorker(
     @JobWorker(type = ServiceTasks.MIRAVELO_ORDER_BIKE, autoComplete = [false])
     fun handle(client: JobClient, job: ActivatedJob, @Variable applicationId: String, @Variable bikeId: String) {
         try {
-            val orderId = useCase.orderBike(ApplicationId.of(applicationId), BikeId(bikeId))
+            val variables = idempotentJobs.runOnceWithVariables(job) { orderBike(applicationId, bikeId) }
             client.newCompleteCommand(job)
-                .variables(mapOf(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.value to orderId.value))
+                .variables(variables)
                 .send()
                 .join()
-        } catch (e: BikeUnavailableException) {
-            // Leaving the task through the error boundary event registers no order compensation.
+        } catch (e: BpmnError) {
             client.newThrowErrorCommand(job)
-                .errorCode(Errors.BIKE_UNAVAILABLE.code)
-                .errorMessage(e.message)
+                .errorCode(e.errorCode)
+                .errorMessage(e.errorMessage)
                 .send()
                 .join()
         } catch (e: RuntimeException) {
@@ -58,4 +61,13 @@ class OrderBikeWorker(
                 .join()
         }
     }
+
+    private fun orderBike(applicationId: String, bikeId: String): Map<String, Any?> =
+        try {
+            val orderId = useCase.orderBike(ApplicationId.of(applicationId), BikeId(bikeId))
+            mapOf(FlowNodes.ServiceTaskOrderBike.Variables.ORDER_ID.value to orderId.value)
+        } catch (e: BikeUnavailableException) {
+            // Leaving the task through the error boundary event registers no order compensation.
+            throw CamundaError.bpmnError(Errors.BIKE_UNAVAILABLE.code, e.message)
+        }
 }
